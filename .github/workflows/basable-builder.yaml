@@ -1,0 +1,166 @@
+# Owned by the basable platform — DO NOT EDIT. The platform writes it to the
+# default branch before every verified build and runs it from there, naming
+# the verify branch and its commit. Lints k8s/ as the deploy workflow does,
+# runs the repository's .basable/verify.sh and pushes whatever it left changed
+# (lockfiles, BUILD files, and anything .gitignore does not keep out) back to
+# the verify branch, where it is reviewed before the branch is merged.
+name: basable-builder
+run-name: ${{ inputs.branch }}@${{ inputs.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: The verify branch to build
+        required: true
+        type: string
+      sha:
+        description: The commit on it the build is for
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: basable-builder-${{ inputs.branch }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BRANCH: ${{ inputs.branch }}
+      SHA: ${{ inputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 1
+      - name: Check the commit
+        run: |
+          head="$(git rev-parse HEAD)"
+          if [ "$head" != "$SHA" ]; then
+            echo "::error::$BRANCH is at $head, not $SHA: the branch moved after the build was dispatched"
+            exit 1
+          fi
+      - name: Lint manifests
+        run: |
+          if [ ! -d k8s ]; then
+            echo "no k8s/ directory: nothing to lint"
+            exit 0
+          fi
+          if ! command -v kustomize >/dev/null || ! command -v helm >/dev/null; then
+            mkdir -p "$HOME/.local/bin"
+            curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.8.1/kustomize_v5.8.1_linux_amd64.tar.gz" | tar -xz -C "$HOME/.local/bin" kustomize
+            curl -fsSL "https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz" | tar -xz --strip-components=1 -C "$HOME/.local/bin" linux-amd64/helm
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          if grep -rn ':latest' k8s/; then
+            echo "::error::k8s/ must not use :latest tags"
+            exit 1
+          fi
+          if ! kustomize build --enable-helm k8s/ > /dev/null; then
+            echo "::error::k8s/ does not render: kustomize build --enable-helm k8s/ failed (above), which the deploy workflow's Lint manifests step would fail on too"
+            exit 1
+          fi
+      - name: Restore Bazel repository cache
+        if: hashFiles('MODULE.bazel') != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/bazel-repo
+            ~/.cache/bazelisk
+          key: basable-builder-repo-${{ hashFiles('MODULE.bazel.lock', 'Cargo.Bazel.lock') }}
+          restore-keys: |
+            basable-builder-repo-
+            repo-cache-
+      - name: Restore Bazel disk cache
+        if: hashFiles('MODULE.bazel') != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/bazel-disk
+          key: basable-builder-disk-${{ inputs.sha }}
+          restore-keys: |
+            basable-builder-disk-
+            disk-cache-
+      - name: Mark cache epoch
+        run: touch "$RUNNER_TEMP/disk-cache-marker"
+      - name: Use the deploy workflow's Bazel configuration
+        if: hashFiles('MODULE.bazel') != ''
+        run: |
+          if grep -qs '^build:ci[[:space:]]' .bazelrc; then
+            echo "build --config=ci" >> "$HOME/.bazelrc"
+            echo "building with --config=ci, as the deploy workflow does"
+          else
+            echo ".bazelrc defines no ci config: building in the project's default configuration"
+          fi
+      - name: Verify
+        run: |
+          if [ ! -f .basable/verify.sh ]; then
+            echo "::error::.basable/verify.sh is missing: add it — it must build and test the project, deleting and regenerating any lockfile it cannot trust; whatever it leaves changed is committed to this branch for review"
+            exit 1
+          fi
+          bash .basable/verify.sh
+      - name: Push regenerated files
+        run: |
+          git config user.name "basable-builder"
+          git config user.email "builder@basable.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing regenerated"
+            exit 0
+          fi
+          # A build that regenerated an implausible amount is not a lockfile
+          # refresh; refuse rather than push a vendored tree.
+          changed=$(git diff --cached --name-only | wc -l)
+          if [ "$changed" -gt 400 ]; then
+            echo "::error::refusing to push $changed changed files — check .gitignore"
+            exit 1
+          fi
+          git diff --cached --stat
+          git commit -m "basable-builder: regenerate lockfiles and generated files"
+          git push origin "HEAD:refs/heads/$BRANCH"
+      - name: Prune disk cache
+        if: success() && hashFiles('MODULE.bazel') != ''
+        run: |
+          cache="$HOME/.cache/bazel-disk"
+          [ -d "$cache" ] || exit 0
+          find "$cache" -type f ! -newer "$RUNNER_TEMP/disk-cache-marker" -delete
+          find "$cache" -mindepth 1 -type d -empty -delete
+          echo "disk cache: $(du -sh "$cache" | cut -f1)"
+      - name: Save Bazel repository cache
+        if: success() && hashFiles('MODULE.bazel') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/bazel-repo
+            ~/.cache/bazelisk
+          key: basable-builder-repo-${{ hashFiles('MODULE.bazel.lock', 'Cargo.Bazel.lock') }}
+      - name: Save Bazel disk cache
+        if: success() && hashFiles('MODULE.bazel') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/bazel-disk
+          key: basable-builder-disk-${{ inputs.sha }}
+      - name: Delete superseded caches
+        if: success() && hashFiles('MODULE.bazel') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          mine="basable-builder-disk-${SHA}"
+          gh cache list --key basable-builder-disk- --limit 100 --json key,createdAt \
+            | jq -r --arg mine "$mine" '(map(select(.key==$mine))[0].createdAt) as $t
+                | if $t == null then empty else .[] | select(.key != $mine and .createdAt < $t) | .key end' \
+            | while read -r key; do
+                gh cache delete "$key" || echo "::warning::could not delete $key"
+              done
+          gh cache list --key basable-builder-repo- --limit 100 --json key,lastAccessedAt \
+            | jq -r 'sort_by(.lastAccessedAt) | .[:-1][] | .key' \
+            | while read -r key; do
+                gh cache delete "$key" || echo "::warning::could not delete $key"
+              done
