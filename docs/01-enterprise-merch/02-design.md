@@ -2,7 +2,7 @@
 
 Brand assets and proofs. No lifecycle: a proof waits for a person's decision, but nothing polls, schedules or drives another system on its behalf, and the quote's own flow already tracks that wait. So this is a plain executor (Directive §1). Directive §2 binds every table, §6 the call, §7 every message.
 
-**Written for the recommended round 1 answer: Design Studio `later`.** Consultants and designers create artwork in their own tools and upload the result. If the Studio is included, this file gains design documents, versions and templates.
+**Round 1 decided Design Studio `later`.** Consultants and designers create artwork in their own tools and upload the result. When the Studio is scheduled, this file gains design documents, versions and templates.
 
 ## Tables
 

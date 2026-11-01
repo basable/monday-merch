@@ -2,7 +2,7 @@
 
 Goods in the building and goods on the road. A stock count is a quantity, not money, so it stays in plain columns (Directive §11). A shipment is a lifecycle: it waits on stock and pickers, drives a carrier, then follows tracking for days. Directive §3, §5, §6 bind `shipment`, §2 every table, §6 every call, §7 every message.
 
-**Written for the recommended round 1 answer: held stock, kits and shipping from stock `include`.** If it is not included, stock, kit and batch tables go away and a shipment always comes from an order.
+**Round 1 decided held stock, kits and shipping from stock `include`.** No warehouse or logistics partner is chosen yet, so picking is recorded by staff until round 3 settles who runs the warehouse.
 
 ## Stock: plain tables
 

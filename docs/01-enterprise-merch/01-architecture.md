@@ -2,8 +2,6 @@
 
 One Rust binary with two replicas over one Postgres database, made of seven nanoservices. Stores and integrations will add two more if round 2 includes them. They are not in the manifest yet.
 
-The manifest and `02-*` files currently assume the recommended answers to round 1. See `00-scope.md`.
-
 ## The main path
 
 1. A visitor browses server-rendered `/shop/*` pages from `catalog`. The basket stays in their browser.
@@ -41,7 +39,7 @@ The manifest and `02-*` files currently assume the recommended answers to round 
 
 ### Why a static frontend
 
-The dashboard and staff console are forms, tables and status views, so plain pages over Connect's JSON are enough. React is justified only by an editor, so choosing the Design Studio in round 1 changes `project.frontend` to `react`.
+The dashboard and staff console are forms, tables and status views, so plain pages over Connect's JSON are enough. React is justified only by an editor. The Design Studio was deferred in round 1, so when it is scheduled it arrives as its own React page, and this plan is updated then.
 
 | Path | Audience | Served by |
 | --- | --- | --- |

@@ -55,7 +55,7 @@ These decide whether the business can run. The plan models them, but it does not
 
 ## Scope ledger
 
-Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned for. No feature has been individually confirmed yet. `include` below means it follows directly from "same functionality" or the order flow cannot work without it, so correct anything here that is wrong.
+Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned for. Rows marked "round 1" are the user's answers. Any other `include` follows directly from "same functionality" or because the order flow cannot work without it, and has not been individually confirmed, so correct anything here that is wrong.
 
 ### Public site
 
@@ -94,7 +94,7 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | Online quote signature | `include` | Turns a quote into an order |
 | Order tracking and reorder | `include` | Core platform |
 | Deadline note on a quote | `include` | A text field a consultant reads |
-| Self-serve checkout | `open` round 1 | See below |
+| Self-serve checkout | `later` | Round 1. Every order starts as a signed quote at launch. |
 | Samples | `open` round 3 | Could reuse the quote flow |
 | Event planner | `open` round 3 | Works back from an event date |
 | Pre-production sample approval for bespoke items | `open` round 3 | Adds a wait to production |
@@ -105,8 +105,8 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | --- | --- | --- |
 | Brand Hub with uploaded logos, colours, fonts | `include` | Consultants need the assets |
 | Proofs and change requests on a quote | `include` | Signing a quote approves its designs |
-| Design Studio editor | `open` round 1 | See below |
-| Brand import, templates, 3D preview, Shuffle, Vectorize, Figma and Canva import | `open` after the Studio | Skipped if the Studio is excluded |
+| Design Studio editor | `later` | Round 1. Designers produce proofs at launch. |
+| Brand import, templates, 3D preview, Shuffle, Vectorize, Figma and Canva import | `later` | Follow the Studio. Asked when it is scheduled. |
 
 ### Warehouse and shipping
 
@@ -114,8 +114,8 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | --- | --- | --- |
 | Ship an order to one address | `include` | Core |
 | Carrier labels and tracking | `include` | Provider chosen in round 3 |
-| Held stock, kits and shipping from stock to many addresses | `open` round 1 | See below |
-| Pack builder on the site | `open` after held stock | Depends on kits |
+| Held stock, kits and shipping from stock to many addresses | `include` | Round 1. Needs a warehouse or logistics partner before launch. |
+| Pack builder on the site | `open` round 3 | Kits are included, so this is now a real candidate |
 | Third-party logistics integration | `open` round 3 | Depends on who runs the warehouse |
 | Non-EU DDP | `open` round 3 | Needs tax registrations and a duty partner |
 | US warehouse and production | `open` round 3 | Second region |
@@ -127,8 +127,8 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | --- | --- | --- |
 | Redeem Links | `open` round 2 | Adds a `stores` nanoservice and vouchers on the ledger |
 | Team Store | `open` round 2 | Approvals, budgets, cost centres |
-| Brand Store (public) | `open` round 2 | Consumer checkout changes VAT and returns rules |
-| Group Orders | `open` round 2 | Could share Team Store machinery |
+| Brand Store (public) | `open` round 3 | Consumer checkout changes VAT and returns rules |
+| Group Orders | `open` round 3 | Could share Team Store machinery |
 
 ### Enterprise
 
@@ -140,8 +140,8 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | Audit log | `include` | Procurement and security reviews ask for it |
 | SSO and SAML | `open` round 2 | See the risk in `01-architecture.md` |
 | Punchout and Coupa, Ariba, Oracle POs | `open` round 2 | Large integration, may be the enterprise door-opener |
-| HR and CRM connectors with automations | `open` round 2 | Adds an `integrations` nanoservice |
-| Purchase approvals in the platform | `open` round 2 | Their site only describes approvals in stores, so this may differentiate |
+| HR and CRM connectors with automations | `open` round 3 | Adds an `integrations` nanoservice |
+| Purchase approvals in the platform | `open` round 3 | Their site only describes approvals in stores, so this may differentiate |
 | Public REST API and webhooks | `open` round 3 | Their site barely mentions one, so this may differentiate |
 | Volume rebates | `open` round 3 | Pricing rule plus a credit |
 
@@ -154,7 +154,7 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | Credit notes, overdue reminders | `include` | Issued invoices are frozen, so corrections need them |
 | EU VAT including reverse charge | `include` | Needed for the first EU invoice |
 | Trial balance and VAT return | `include` | Directive §11 |
-| Card payment of an invoice | `open` round 1 | See below |
+| Card payment of an invoice | `include` | Round 1. Stripe Checkout, without their 3.5% fee. |
 | Multi-currency | `open` round 3 | Each currency is a ledger unit |
 | Accounting software export | `open` round 3 | Finance will ask for it |
 | E-invoicing (Peppol) | `open` round 3 | Enterprise buyers and EU rules are moving this way |
@@ -168,23 +168,26 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | GDPR controls: retention, erasure, access logging | `include` | Recipients' home addresses are personal data |
 | ISO and EcoVadis certification | `exclude` | Company certifications, not software. See "What software cannot supply". |
 
-## Round 1: asked now
+## Decided
 
-The manifest and the `02-*` files are written as if the recommended answer holds. Each answer updates them.
+**Round 1 (2026-11-01):** self-serve checkout `later`, card payment `include`, held stock and kitting `include`, Design Studio `later`. No notes were added. The answers match the assumptions the first commit was written for, so the manifest's nanoservices did not change. No warehouse or logistics partner was named, so that remains a business prerequisite.
 
-| Candidate | Recommended | If the other way |
+## Round 2: asked now
+
+Unlike round 1, these are not in the manifest yet, because they add a nanoservice or an identity decision. Answers add them.
+
+| Candidate | Recommended | What the answer changes |
 | --- | --- | --- |
-| Self-serve checkout | `later` | `include` needs automated freight, VAT and artwork checks before an order exists, which makes `order` a second path |
-| Card payment of an invoice | `include` | `later` or `exclude` removes Stripe, the webhook and the card paths from `billing` |
-| Held stock, kits and shipping from stock | `include` | `later` or `exclude` shrinks `fulfilment` to one shipment per order and removes stock tables |
-| Design Studio editor | `later` | `include` sets `project.frontend` to `react` and adds design documents and templates to `design` |
+| Redeem Links | `include` | Adds a `stores` nanoservice with a redemption lifecycle, and vouchers on the ledger |
+| Team Store | `later` | `include` adds store catalogues, budgets, approvals and a monthly fee to `stores` |
+| SSO and SAML | `later` | `include` requires settling the identity question in `01-architecture.md` first |
+| Punchout and procurement systems | `later` | `include` adds cXML punchout and purchase order intake |
 
 ## Open candidates for later rounds
 
-- **Round 2:** Redeem Links, Team Store, Brand Store, Group Orders, SSO and SAML, punchout and procurement systems, HR and CRM connectors, purchase approvals.
-- **Round 3:** languages and regions, multi-currency, supplier catalogue feeds, third-party logistics and the carrier provider, DDP, US region, samples, event planner, bespoke approvals, public API, volume rebates, accounting export, e-invoicing.
+- **Round 3:** Brand Store, Group Orders, HR and CRM connectors, purchase approvals, pack builder, languages and regions, multi-currency, supplier catalogue feeds, third-party logistics and the carrier provider, DDP, US region, samples, event planner, bespoke approvals, public API, volume rebates, accounting export, e-invoicing.
 - **Round 4:** inspiration gallery, returns, plus anything raised on the way.
 
 ## Status
 
-Not ready. Round 1 is waiting for answers.
+Not ready. Round 2 is waiting for answers.

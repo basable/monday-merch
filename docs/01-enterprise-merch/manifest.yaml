@@ -2,7 +2,7 @@ apiVersion: basable.com/v1
 kind: ProjectPlan
 project:
   language: rust
-  frontend: static          # working assumption until round 1 answers "Design Studio"; see 00-scope.md
+  frontend: static          # Design Studio deferred in round 1; see 01-architecture.md
   auth: kratos
   basableLogin: false       # customers are other companies' employees; see 01-architecture.md
   database: { instances: 1 }

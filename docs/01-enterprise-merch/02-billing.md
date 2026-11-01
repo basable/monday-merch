@@ -2,7 +2,7 @@
 
 Everything owed, held or moved. This nanoservice owns the project's ledger (Directive §11). Directive §3, §5, §6 bind the processing-object types, §2 every table, §6 every call, §7 every message.
 
-**Written for the recommended round 1 answer: card payment `include`.** If it is not included, the `payments` calls, the webhook, `PayInvoiceByCard` and `payment_webhook_event` go away. Bank transfer and the `payment` object stay.
+**Round 1 decided card payment `include`,** alongside bank transfer.
 
 ## The ledger
 

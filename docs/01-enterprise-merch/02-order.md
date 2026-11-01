@@ -2,7 +2,7 @@
 
 From a visitor's request to a delivered order. A quote is plain tables, because its waits are timestamps a ticker can check. An order and a production run are lifecycles, because each waits on people and other systems over days and must be re-driven until it matches. Directive §3, §5, §6 bind the processing-object types, §2 every table, §7 every message.
 
-**Written for the recommended round 1 answer: self-serve checkout `later`.** Every order comes from a signed quote.
+**Round 1 decided self-serve checkout `later`.** Every order comes from a signed quote.
 
 ## Quote: plain tables
 
