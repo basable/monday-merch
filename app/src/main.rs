@@ -117,7 +117,9 @@ async fn run() -> Result<(), BootError> {
     app.serve()
         .connect(api.connect_router(router))
         .raw(api.raw_routes(router))
-        .auth(Validator::kratos(&cfg.kratos_public_url).public_prefixes(["/api/webhooks/"]))
+        // Public: webhooks verify their own signatures, and the landing page
+        // checks the API's health before anyone has signed in.
+        .auth(Validator::kratos(&cfg.kratos_public_url).public_prefixes(["/api/webhooks/", "/api/health.v1.HealthService/"]))
         .components(router)
         .run()
         .await
