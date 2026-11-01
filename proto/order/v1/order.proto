@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package order.v1;
+
+// OrderService: the API of nanoservice `order`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service OrderService {
+  rpc RequestQuote(RequestQuoteRequest) returns (RequestQuoteResponse);
+  rpc ListQuotes(ListQuotesRequest) returns (ListQuotesResponse);
+  rpc GetQuote(GetQuoteRequest) returns (GetQuoteResponse);
+  rpc AssignQuote(AssignQuoteRequest) returns (AssignQuoteResponse);
+  rpc PublishQuoteVersion(PublishQuoteVersionRequest) returns (PublishQuoteVersionResponse);
+  rpc RequestQuoteChanges(RequestQuoteChangesRequest) returns (RequestQuoteChangesResponse);
+  rpc AcceptQuote(AcceptQuoteRequest) returns (AcceptQuoteResponse);
+  rpc Reorder(ReorderRequest) returns (ReorderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc ListProductionRuns(ListProductionRunsRequest) returns (ListProductionRunsResponse);
+  rpc RecordProductionEvent(RecordProductionEventRequest) returns (RecordProductionEventResponse);
+  rpc SubmitLead(SubmitLeadRequest) returns (SubmitLeadResponse);
+}
+
+message RequestQuoteRequest {
+  // TODO: the request fields.
+}
+
+message RequestQuoteResponse {
+  // TODO: the response fields.
+}
+
+message ListQuotesRequest {
+  // TODO: the request fields.
+}
+
+message ListQuotesResponse {
+  // TODO: the response fields.
+}
+
+message GetQuoteRequest {
+  // TODO: the request fields.
+}
+
+message GetQuoteResponse {
+  // TODO: the response fields.
+}
+
+message AssignQuoteRequest {
+  // TODO: the request fields.
+}
+
+message AssignQuoteResponse {
+  // TODO: the response fields.
+}
+
+message PublishQuoteVersionRequest {
+  // TODO: the request fields.
+}
+
+message PublishQuoteVersionResponse {
+  // TODO: the response fields.
+}
+
+message RequestQuoteChangesRequest {
+  // TODO: the request fields.
+}
+
+message RequestQuoteChangesResponse {
+  // TODO: the response fields.
+}
+
+message AcceptQuoteRequest {
+  // TODO: the request fields.
+}
+
+message AcceptQuoteResponse {
+  // TODO: the response fields.
+}
+
+message ReorderRequest {
+  // TODO: the request fields.
+}
+
+message ReorderResponse {
+  // TODO: the response fields.
+}
+
+message ListOrdersRequest {
+  // TODO: the request fields.
+}
+
+message ListOrdersResponse {
+  // TODO: the response fields.
+}
+
+message GetOrderRequest {
+  // TODO: the request fields.
+}
+
+message GetOrderResponse {
+  // TODO: the response fields.
+}
+
+message CancelOrderRequest {
+  // TODO: the request fields.
+}
+
+message CancelOrderResponse {
+  // TODO: the response fields.
+}
+
+message ListProductionRunsRequest {
+  // TODO: the request fields.
+}
+
+message ListProductionRunsResponse {
+  // TODO: the response fields.
+}
+
+message RecordProductionEventRequest {
+  // TODO: the request fields.
+}
+
+message RecordProductionEventResponse {
+  // TODO: the response fields.
+}
+
+message SubmitLeadRequest {
+  // TODO: the request fields.
+}
+
+message SubmitLeadResponse {
+  // TODO: the response fields.
+}

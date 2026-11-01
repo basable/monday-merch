@@ -1,0 +1,15 @@
+{
+  "configSetName": "print_method",
+  "items": [
+    {
+      "@type": "catalog.v1.PrintMethodConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "title": "",
+      "constraints": ""
+    }
+  ]
+}

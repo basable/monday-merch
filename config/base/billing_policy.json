@@ -1,0 +1,16 @@
+{
+  "configSetName": "billing_policy",
+  "items": [
+    {
+      "@type": "billing.v1.BillingPolicyConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "default_terms_days": 0,
+      "card_fee_bps": 0,
+      "reminder_days": "",
+      "match_tolerance_bps": 0
+    }
+  ]
+}

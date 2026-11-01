@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package design.v1;
+
+// DesignService: the API of nanoservice `design`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service DesignService {
+  rpc GetBrandProfile(GetBrandProfileRequest) returns (GetBrandProfileResponse);
+  rpc UpdateBrandProfile(UpdateBrandProfileRequest) returns (UpdateBrandProfileResponse);
+  rpc ListBrandAssets(ListBrandAssetsRequest) returns (ListBrandAssetsResponse);
+  rpc CreateAssetUpload(CreateAssetUploadRequest) returns (CreateAssetUploadResponse);
+  rpc ConfirmAssetUpload(ConfirmAssetUploadRequest) returns (ConfirmAssetUploadResponse);
+  rpc DeleteBrandAsset(DeleteBrandAssetRequest) returns (DeleteBrandAssetResponse);
+  rpc CreateProof(CreateProofRequest) returns (CreateProofResponse);
+  rpc ListProofs(ListProofsRequest) returns (ListProofsResponse);
+  rpc CreateDesign(CreateDesignRequest) returns (CreateDesignResponse);
+  rpc GetDesign(GetDesignRequest) returns (GetDesignResponse);
+  rpc ListDesigns(ListDesignsRequest) returns (ListDesignsResponse);
+  rpc SaveDesignDraft(SaveDesignDraftRequest) returns (SaveDesignDraftResponse);
+  rpc SaveDesignVersion(SaveDesignVersionRequest) returns (SaveDesignVersionResponse);
+  rpc ArchiveDesign(ArchiveDesignRequest) returns (ArchiveDesignResponse);
+  rpc CreatePreviewUpload(CreatePreviewUploadRequest) returns (CreatePreviewUploadResponse);
+  rpc ListDesignTemplates(ListDesignTemplatesRequest) returns (ListDesignTemplatesResponse);
+  rpc GetDesignTemplate(GetDesignTemplateRequest) returns (GetDesignTemplateResponse);
+  rpc UpsertDesignTemplate(UpsertDesignTemplateRequest) returns (UpsertDesignTemplateResponse);
+}
+
+message GetBrandProfileRequest {
+  // TODO: the request fields.
+}
+
+message GetBrandProfileResponse {
+  // TODO: the response fields.
+}
+
+message UpdateBrandProfileRequest {
+  // TODO: the request fields.
+}
+
+message UpdateBrandProfileResponse {
+  // TODO: the response fields.
+}
+
+message ListBrandAssetsRequest {
+  // TODO: the request fields.
+}
+
+message ListBrandAssetsResponse {
+  // TODO: the response fields.
+}
+
+message CreateAssetUploadRequest {
+  // TODO: the request fields.
+}
+
+message CreateAssetUploadResponse {
+  // TODO: the response fields.
+}
+
+message ConfirmAssetUploadRequest {
+  // TODO: the request fields.
+}
+
+message ConfirmAssetUploadResponse {
+  // TODO: the response fields.
+}
+
+message DeleteBrandAssetRequest {
+  // TODO: the request fields.
+}
+
+message DeleteBrandAssetResponse {
+  // TODO: the response fields.
+}
+
+message CreateProofRequest {
+  // TODO: the request fields.
+}
+
+message CreateProofResponse {
+  // TODO: the response fields.
+}
+
+message ListProofsRequest {
+  // TODO: the request fields.
+}
+
+message ListProofsResponse {
+  // TODO: the response fields.
+}
+
+message CreateDesignRequest {
+  // TODO: the request fields.
+}
+
+message CreateDesignResponse {
+  // TODO: the response fields.
+}
+
+message GetDesignRequest {
+  // TODO: the request fields.
+}
+
+message GetDesignResponse {
+  // TODO: the response fields.
+}
+
+message ListDesignsRequest {
+  // TODO: the request fields.
+}
+
+message ListDesignsResponse {
+  // TODO: the response fields.
+}
+
+message SaveDesignDraftRequest {
+  // TODO: the request fields.
+}
+
+message SaveDesignDraftResponse {
+  // TODO: the response fields.
+}
+
+message SaveDesignVersionRequest {
+  // TODO: the request fields.
+}
+
+message SaveDesignVersionResponse {
+  // TODO: the response fields.
+}
+
+message ArchiveDesignRequest {
+  // TODO: the request fields.
+}
+
+message ArchiveDesignResponse {
+  // TODO: the response fields.
+}
+
+message CreatePreviewUploadRequest {
+  // TODO: the request fields.
+}
+
+message CreatePreviewUploadResponse {
+  // TODO: the response fields.
+}
+
+message ListDesignTemplatesRequest {
+  // TODO: the request fields.
+}
+
+message ListDesignTemplatesResponse {
+  // TODO: the response fields.
+}
+
+message GetDesignTemplateRequest {
+  // TODO: the request fields.
+}
+
+message GetDesignTemplateResponse {
+  // TODO: the response fields.
+}
+
+message UpsertDesignTemplateRequest {
+  // TODO: the request fields.
+}
+
+message UpsertDesignTemplateResponse {
+  // TODO: the response fields.
+}

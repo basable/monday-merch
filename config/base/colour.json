@@ -1,0 +1,16 @@
+{
+  "configSetName": "colour",
+  "items": [
+    {
+      "@type": "catalog.v1.ColourConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "title": "",
+      "hex": "",
+      "family": ""
+    }
+  ]
+}

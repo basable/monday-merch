@@ -1,0 +1,15 @@
+{
+  "configSetName": "quote_policy",
+  "items": [
+    {
+      "@type": "order.v1.QuotePolicyConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "sla_hours": 0,
+      "sla_alert_hours": 0,
+      "validity_days": 0
+    }
+  ]
+}

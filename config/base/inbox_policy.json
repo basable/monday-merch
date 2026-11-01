@@ -1,0 +1,18 @@
+{
+  "configSetName": "inbox_policy",
+  "items": [
+    {
+      "@type": "inbox.v1.InboxPolicyConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "max_attachment_bytes": 0,
+      "allowed_mime_types": "",
+      "auto_apply_kinds": "",
+      "retention_days": 0,
+      "model": "",
+      "effort": ""
+    }
+  ]
+}

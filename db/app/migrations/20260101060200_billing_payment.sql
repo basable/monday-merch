@@ -1,0 +1,112 @@
+-- migrate:up
+
+-- Processing-object type `payment` (key 6) of nanoservice
+-- `billing`: the registry row, the envelope partition INSIDE this
+-- nanoservice's schema, and the typed spec/status tables hanging off the
+-- partition by composite foreign key. The envelope owns identity,
+-- generation, scheduling, deletion intent and claim authority; these tables
+-- carry domain columns only (the Directive §3 invariant 1).
+--
+-- The registry row and the partition need the envelope parent's owner, the
+-- `app` login this migration runs as, so they come first; the partition is
+-- then handed to the nanoservice role, whose typed tables follow under
+-- SET LOCAL ROLE. Every framework statement targets the partition, and the
+-- typed tables reference the partition, so the role needs nothing on the
+-- parent. RESET ROLE at the end: dbmate records this version in the same
+-- transaction, and the role may not write the ledger.
+
+INSERT INTO basable.processing_object_type (key, name) VALUES (6, 'payment');
+
+CREATE TABLE nano_billing.processing_object_payment
+    PARTITION OF basable.processing_object FOR VALUES IN (6)
+    WITH (fillfactor = 90);
+ALTER TABLE nano_billing.processing_object_payment OWNER TO nano_billing;
+
+SET LOCAL ROLE nano_billing;
+SET LOCAL search_path = nano_billing;
+
+-- Desired state only.
+CREATE TABLE payment_spec (
+    id UUID PRIMARY KEY,
+    processing_object_type_key SMALLINT NOT NULL DEFAULT 6
+        CHECK (processing_object_type_key = 6),
+    reference TEXT NOT NULL, -- immutable (trigger below)
+    invoice_id UUID, -- immutable (trigger below)
+    bill_id UUID, -- immutable (trigger below)
+    company_id UUID NOT NULL, -- immutable (trigger below)
+    method TEXT NOT NULL, -- immutable (trigger below)
+    direction TEXT NOT NULL, -- immutable (trigger below)
+    amount_minor BIGINT NOT NULL, -- immutable (trigger below)
+    currency TEXT NOT NULL, -- immutable (trigger below)
+    value_date TIMESTAMPTZ,
+    cancel_requested BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    FOREIGN KEY (processing_object_type_key, id)
+        REFERENCES processing_object_payment (processing_object_type_key, id)
+        ON DELETE CASCADE
+);
+
+-- Identity columns can never be retargeted, whatever the query.
+CREATE FUNCTION reject_payment_spec_identity_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.reference IS DISTINCT FROM OLD.reference
+       OR NEW.invoice_id IS DISTINCT FROM OLD.invoice_id
+       OR NEW.bill_id IS DISTINCT FROM OLD.bill_id
+       OR NEW.company_id IS DISTINCT FROM OLD.company_id
+       OR NEW.method IS DISTINCT FROM OLD.method
+       OR NEW.direction IS DISTINCT FROM OLD.direction
+       OR NEW.amount_minor IS DISTINCT FROM OLD.amount_minor
+       OR NEW.currency IS DISTINCT FROM OLD.currency THEN
+        RAISE EXCEPTION 'payment identity is immutable (attempted change on %)', OLD.id
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_payment_spec_identity_immutable
+    BEFORE UPDATE ON payment_spec
+    FOR EACH ROW EXECUTE FUNCTION reject_payment_spec_identity_change();
+
+-- Observed state only, written exclusively under exact claim authority
+-- (fenced completions and Claim::write_status). No unfenced writer exists.
+CREATE TABLE payment_status (
+    id UUID PRIMARY KEY,
+    processing_object_type_key SMALLINT NOT NULL DEFAULT 6
+        CHECK (processing_object_type_key = 6),
+    phase TEXT NOT NULL,
+    intent_at TIMESTAMPTZ,
+    provider_id TEXT,
+    checkout_url TEXT,
+    ledger_version BIGINT NOT NULL,
+    settled_at TIMESTAMPTZ,
+    reversed_at TIMESTAMPTZ,
+    failure TEXT,
+    -- Declared-effect slot (uncomment when an adapter uses Strategy::Declared):
+    -- effect_operation VARCHAR(64),
+    -- effect_key TEXT,
+    -- effect_declared_at TIMESTAMPTZ,
+    -- effect_detail JSONB,
+    -- CHECK ((effect_operation IS NULL) = (effect_key IS NULL) AND (effect_operation IS NULL) = (effect_declared_at IS NULL)),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    FOREIGN KEY (processing_object_type_key, id)
+        REFERENCES processing_object_payment (processing_object_type_key, id)
+        ON DELETE CASCADE
+);
+
+RESET ROLE;
+
+-- migrate:down
+SET LOCAL ROLE nano_billing;
+SET LOCAL search_path = nano_billing;
+DROP TABLE IF EXISTS payment_status;
+DROP TABLE IF EXISTS payment_spec;
+DROP FUNCTION IF EXISTS reject_payment_spec_identity_change();
+RESET ROLE;
+DROP TABLE IF EXISTS nano_billing.processing_object_payment;
+DELETE FROM basable.processing_object_type WHERE key = 6 AND name = 'payment';

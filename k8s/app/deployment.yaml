@@ -1,0 +1,99 @@
+# Wave 1: the nanoservice binary, two replicas (the frameworks are
+# multi-replica safe by construction). The image path is LITERAL with the
+# platform's tag placeholder; the workflow pins the digest by name.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  annotations:
+    basable.com/apply-wave: "1"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: registry.basable.com/abandon-above-trade/monday-merch
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            # Where the other replicas reach this one's pubsub bus
+            # (basable-pubsub): the bus publishes the pod IP, with a port
+            # the kernel picks, in its directory.
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-postgres-app
+                  key: uri
+            - name: PUBLIC_BASE_URL
+              value: https://TENANT_DOMAIN_PLACEHOLDER
+            - name: KRATOS_PUBLIC_URL
+              value: http://kratos-public:4433
+            # The config seed the image carries (config/BUILD.bazel), applied
+            # at boot; CONFIG_ENV (default prod) picks the files.
+            - name: CONFIG_SEED_DIR
+              value: /config/base
+            - name: RUST_LOG
+              value: info
+            # A user-supplied secret (a provider's API key, a webhook's
+            # verification secret) is added here by whoever fills the code
+            # that reads it: its own non-optional secretKeyRef on the
+            # app-secrets Secret the editor fills per environment, so the
+            # deploy waits at its secrets step until the key exists. Name the
+            # key in the chat so the user can add it (docs/operations.md).
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # CPU limits are sized to the free tier's namespace quota: the
+          # platform allows the environment's CPU times 1.5 as burst (3000m
+          # at 2000m) beside the vCluster control plane. App 2 x 500m,
+          # Postgres 1000m, Kratos 250m leave room for a rolling update's
+          # surge pod (wave 1) or a wave-0 Job (250m each); 2 x 1000m plus
+          # Kratos did not even admit Kratos (first tenant deploy,
+          # 2026-10-29). Requests are what is guaranteed; raise the limits
+          # with the environment's CPU in .basable/config.yaml.
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

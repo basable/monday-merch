@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package design.v1;
+
+import "basable/config/v1/config.proto";
+
+// The configuration messages nanoservice `design` declares. Each
+// embeds the ConfigHeader; a reference field is a string that holds a
+// #{Type:namespace:name} reference in the seed and the target's id once
+// loaded. Edit the plan's configTypes, not this file.
+
+// StudioFontConfiguration (id 107, public ids `sfnt_…`).
+message StudioFontConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string family = 2;
+  string files = 3;
+  string licence = 4;
+}

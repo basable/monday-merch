@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package notifier.v1;
+
+import "basable/config/v1/config.proto";
+
+// The configuration messages nanoservice `notifier` declares. Each
+// embeds the ConfigHeader; a reference field is a string that holds a
+// #{Type:namespace:name} reference in the seed and the target's id once
+// loaded. Edit the plan's configTypes, not this file.
+
+// EmailTemplateConfiguration (id 114, public ids `etpl_…`).
+message EmailTemplateConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string slug = 2;
+  string locale = 3;
+  string subject = 4;
+  string body_html = 5;
+  string body_text = 6;
+}

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package inbox.v1;
+
+// InboxService: the API of nanoservice `inbox`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service InboxService {
+  rpc ListInboundMessages(ListInboundMessagesRequest) returns (ListInboundMessagesResponse);
+  rpc ListReviewQueue(ListReviewQueueRequest) returns (ListReviewQueueResponse);
+  rpc GetInboundDocument(GetInboundDocumentRequest) returns (GetInboundDocumentResponse);
+  rpc GetInboundFileLink(GetInboundFileLinkRequest) returns (GetInboundFileLinkResponse);
+  rpc DecideInboundDocument(DecideInboundDocumentRequest) returns (DecideInboundDocumentResponse);
+}
+
+message ListInboundMessagesRequest {
+  // TODO: the request fields.
+}
+
+message ListInboundMessagesResponse {
+  // TODO: the response fields.
+}
+
+message ListReviewQueueRequest {
+  // TODO: the request fields.
+}
+
+message ListReviewQueueResponse {
+  // TODO: the response fields.
+}
+
+message GetInboundDocumentRequest {
+  // TODO: the request fields.
+}
+
+message GetInboundDocumentResponse {
+  // TODO: the response fields.
+}
+
+message GetInboundFileLinkRequest {
+  // TODO: the request fields.
+}
+
+message GetInboundFileLinkResponse {
+  // TODO: the response fields.
+}
+
+message DecideInboundDocumentRequest {
+  // TODO: the request fields.
+}
+
+message DecideInboundDocumentResponse {
+  // TODO: the response fields.
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package billing.v1;
+
+import "basable/config/v1/config.proto";
+
+// The configuration messages nanoservice `billing` declares. Each
+// embeds the ConfigHeader; a reference field is a string that holds a
+// #{Type:namespace:name} reference in the seed and the target's id once
+// loaded. Edit the plan's configTypes, not this file.
+
+// VatRuleConfiguration (id 112, public ids `vatr_…`).
+message VatRuleConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string country = 2;
+  int32 standard_rate_bps = 3;
+  string valid_from = 4;
+}
+
+// BillingPolicyConfiguration (id 113, public ids `bpol_…`).
+message BillingPolicyConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  int32 default_terms_days = 2;
+  int32 card_fee_bps = 3;
+  string reminder_days = 4;
+  int32 match_tolerance_bps = 5;
+}

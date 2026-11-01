@@ -1,0 +1,132 @@
+# The generated protobuf crate: buffa message types + views and the
+# connect-rust service stubs, regenerated from proto/ on every build, one
+# genrule per proto package, and mounted by src/lib.rs with include!. Never
+# edit generated code; edit the .proto files. The scaffolder adds a package
+# per nanoservice between the markers.
+load("@crates//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//tools:proto.bzl", "buffa_connect_library")
+
+buffa_connect_library(
+    name = "health_v1",
+    package = "health.v1",
+    protos = ["//proto:health/v1/health.proto"],
+)
+
+buffa_connect_library(
+    name = "basable_config_v1",
+    connect = False,
+    package = "basable.config.v1",
+    protos = ["//proto:basable/config/v1/config.proto"],
+)
+
+# basable:proto-packages-begin
+
+buffa_connect_library(
+    name = "account_v1",
+    deps = ["//proto:protos"],
+    package = "account.v1",
+    protos = [
+        "//proto:account/v1/account.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "catalog_v1",
+    deps = ["//proto:protos"],
+    package = "catalog.v1",
+    protos = [
+        "//proto:catalog/v1/catalog.proto",
+        "//proto:catalog/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "design_v1",
+    deps = ["//proto:protos"],
+    package = "design.v1",
+    protos = [
+        "//proto:design/v1/design.proto",
+        "//proto:design/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "order_v1",
+    deps = ["//proto:protos"],
+    package = "order.v1",
+    protos = [
+        "//proto:order/v1/order.proto",
+        "//proto:order/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "fulfilment_v1",
+    deps = ["//proto:protos"],
+    package = "fulfilment.v1",
+    protos = [
+        "//proto:fulfilment/v1/fulfilment.proto",
+        "//proto:fulfilment/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "billing_v1",
+    deps = ["//proto:protos"],
+    package = "billing.v1",
+    protos = [
+        "//proto:billing/v1/billing.proto",
+        "//proto:billing/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "notifier_v1",
+    connect = False,
+    deps = ["//proto:protos"],
+    package = "notifier.v1",
+    protos = [
+        "//proto:notifier/v1/config.proto",
+    ],
+)
+
+buffa_connect_library(
+    name = "inbox_v1",
+    deps = ["//proto:protos"],
+    package = "inbox.v1",
+    protos = [
+        "//proto:inbox/v1/inbox.proto",
+        "//proto:inbox/v1/config.proto",
+    ],
+)
+# basable:proto-packages-end
+
+rust_library(
+    name = "proto",
+    srcs = [
+        "src/lib.rs",
+        ":health_v1",
+        ":basable_config_v1",
+        # basable:proto-srcs-begin
+        ":account_v1",
+        ":catalog_v1",
+        ":design_v1",
+        ":order_v1",
+        ":fulfilment_v1",
+        ":billing_v1",
+        ":notifier_v1",
+        ":inbox_v1",
+        # basable:proto-srcs-end
+    ],
+    aliases = aliases(),
+    crate_name = "proto",
+    crate_root = "src/lib.rs",
+    # Generated code: rustfmt and clippy judge the plugins, not the project.
+    tags = [
+        "noclippy",
+        "norustfmt",
+    ],
+    deps = all_crate_deps(normal = True),
+    visibility = ["//visibility:public"],
+)

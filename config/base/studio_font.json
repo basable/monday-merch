@@ -1,0 +1,15 @@
+{
+  "configSetName": "studio_font",
+  "items": [
+    {
+      "@type": "design.v1.StudioFontConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "family": "",
+      "files": "",
+      "licence": ""
+    }
+  ]
+}

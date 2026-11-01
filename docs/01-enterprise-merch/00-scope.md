@@ -208,4 +208,4 @@ These stay open. None is in the manifest, and `scaffold_nanoservice` adds what i
 
 ## Status
 
-`ready` to render for a first preview, at the user's request. The product is not feature-complete: the candidates above are undecided, and the working name is a placeholder until the user chooses one.
+`ready` to render for a first preview, at the user's request. The product is not feature-complete: the candidates above are undecided, and the working name, `Tessera`, is a placeholder until the user chooses one. It has not been checked for trademarks.

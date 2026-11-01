@@ -1,0 +1,16 @@
+{
+  "configSetName": "category",
+  "items": [
+    {
+      "@type": "catalog.v1.CategoryConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "parent_slug": "",
+      "title": "",
+      "sort_order": 0
+    }
+  ]
+}

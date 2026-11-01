@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package account.v1;
+
+// AccountService: the API of nanoservice `account`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service AccountService {
+  rpc GetCompany(GetCompanyRequest) returns (GetCompanyResponse);
+  rpc UpdateCompany(UpdateCompanyRequest) returns (UpdateCompanyResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  rpc UpdateMember(UpdateMemberRequest) returns (UpdateMemberResponse);
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  rpc ListDepartments(ListDepartmentsRequest) returns (ListDepartmentsResponse);
+  rpc UpsertDepartment(UpsertDepartmentRequest) returns (UpsertDepartmentResponse);
+  rpc ListAddresses(ListAddressesRequest) returns (ListAddressesResponse);
+  rpc UpsertAddress(UpsertAddressRequest) returns (UpsertAddressResponse);
+  rpc ListRecipients(ListRecipientsRequest) returns (ListRecipientsResponse);
+  rpc UpsertRecipient(UpsertRecipientRequest) returns (UpsertRecipientResponse);
+  rpc ImportRecipients(ImportRecipientsRequest) returns (ImportRecipientsResponse);
+  rpc EraseRecipient(EraseRecipientRequest) returns (EraseRecipientResponse);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+}
+
+message GetCompanyRequest {
+  // TODO: the request fields.
+}
+
+message GetCompanyResponse {
+  // TODO: the response fields.
+}
+
+message UpdateCompanyRequest {
+  // TODO: the request fields.
+}
+
+message UpdateCompanyResponse {
+  // TODO: the response fields.
+}
+
+message ListMembersRequest {
+  // TODO: the request fields.
+}
+
+message ListMembersResponse {
+  // TODO: the response fields.
+}
+
+message InviteMemberRequest {
+  // TODO: the request fields.
+}
+
+message InviteMemberResponse {
+  // TODO: the response fields.
+}
+
+message UpdateMemberRequest {
+  // TODO: the request fields.
+}
+
+message UpdateMemberResponse {
+  // TODO: the response fields.
+}
+
+message RemoveMemberRequest {
+  // TODO: the request fields.
+}
+
+message RemoveMemberResponse {
+  // TODO: the response fields.
+}
+
+message ListDepartmentsRequest {
+  // TODO: the request fields.
+}
+
+message ListDepartmentsResponse {
+  // TODO: the response fields.
+}
+
+message UpsertDepartmentRequest {
+  // TODO: the request fields.
+}
+
+message UpsertDepartmentResponse {
+  // TODO: the response fields.
+}
+
+message ListAddressesRequest {
+  // TODO: the request fields.
+}
+
+message ListAddressesResponse {
+  // TODO: the response fields.
+}
+
+message UpsertAddressRequest {
+  // TODO: the request fields.
+}
+
+message UpsertAddressResponse {
+  // TODO: the response fields.
+}
+
+message ListRecipientsRequest {
+  // TODO: the request fields.
+}
+
+message ListRecipientsResponse {
+  // TODO: the response fields.
+}
+
+message UpsertRecipientRequest {
+  // TODO: the request fields.
+}
+
+message UpsertRecipientResponse {
+  // TODO: the response fields.
+}
+
+message ImportRecipientsRequest {
+  // TODO: the request fields.
+}
+
+message ImportRecipientsResponse {
+  // TODO: the response fields.
+}
+
+message EraseRecipientRequest {
+  // TODO: the request fields.
+}
+
+message EraseRecipientResponse {
+  // TODO: the response fields.
+}
+
+message ListAuditEventsRequest {
+  // TODO: the request fields.
+}
+
+message ListAuditEventsResponse {
+  // TODO: the response fields.
+}

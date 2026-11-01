@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package fulfilment.v1;
+
+import "basable/config/v1/config.proto";
+
+// The configuration messages nanoservice `fulfilment` declares. Each
+// embeds the ConfigHeader; a reference field is a string that holds a
+// #{Type:namespace:name} reference in the seed and the target's id once
+// loaded. Edit the plan's configTypes, not this file.
+
+// WarehouseConfiguration (id 109, public ids `wh_…`).
+message WarehouseConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string slug = 2;
+  string title = 3;
+  string country = 4;
+  string operator = 5;
+}
+
+// ShippingZoneConfiguration (id 110, public ids `szn_…`).
+message ShippingZoneConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string slug = 2;
+  string countries = 3;
+  int32 standard_transit_days = 4;
+  int32 express_transit_days = 5;
+  string currency = 6;
+  int64 standard_pack_minor = 7;
+  int64 express_pack_minor = 8;
+  string incoterm = 9;
+}
+
+// FulfilmentFeeConfiguration (id 111, public ids `ffee_…`).
+message FulfilmentFeeConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  string currency = 2;
+  int64 pack_handling_minor = 3;
+  int64 warehouse_inbound_minor = 4;
+}

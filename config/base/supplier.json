@@ -1,0 +1,18 @@
+{
+  "configSetName": "supplier",
+  "items": [
+    {
+      "@type": "catalog.v1.SupplierConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "title": "",
+      "po_email": "",
+      "country": "",
+      "sender_domains": "",
+      "bank_accounts": ""
+    }
+  ]
+}

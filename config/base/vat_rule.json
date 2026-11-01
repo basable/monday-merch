@@ -1,0 +1,15 @@
+{
+  "configSetName": "vat_rule",
+  "items": [
+    {
+      "@type": "billing.v1.VatRuleConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "country": "",
+      "standard_rate_bps": 0,
+      "valid_from": ""
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "configSetName": "collection",
+  "items": [
+    {
+      "@type": "catalog.v1.CollectionConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "title": "",
+      "active": false
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "configSetName": "shipping_zone",
+  "items": [
+    {
+      "@type": "fulfilment.v1.ShippingZoneConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "countries": "",
+      "standard_transit_days": 0,
+      "express_transit_days": 0,
+      "currency": "",
+      "standard_pack_minor": 0,
+      "express_pack_minor": 0,
+      "incoterm": ""
+    }
+  ]
+}

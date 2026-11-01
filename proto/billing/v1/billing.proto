@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package billing.v1;
+
+// BillingService: the API of nanoservice `billing`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service BillingService {
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc GetInvoiceDownload(GetInvoiceDownloadRequest) returns (GetInvoiceDownloadResponse);
+  rpc PayInvoiceByCard(PayInvoiceByCardRequest) returns (PayInvoiceByCardResponse);
+  rpc RecordBankPayment(RecordBankPaymentRequest) returns (RecordBankPaymentResponse);
+  rpc IssueCreditNote(IssueCreditNoteRequest) returns (IssueCreditNoteResponse);
+  rpc RecordRefund(RecordRefundRequest) returns (RecordRefundResponse);
+  rpc GetSpendReport(GetSpendReportRequest) returns (GetSpendReportResponse);
+  rpc DraftVatReturn(DraftVatReturnRequest) returns (DraftVatReturnResponse);
+  rpc MarkVatReturnFiled(MarkVatReturnFiledRequest) returns (MarkVatReturnFiledResponse);
+  rpc GetTrialBalance(GetTrialBalanceRequest) returns (GetTrialBalanceResponse);
+  rpc ListSupplierBills(ListSupplierBillsRequest) returns (ListSupplierBillsResponse);
+  rpc GetSupplierBill(GetSupplierBillRequest) returns (GetSupplierBillResponse);
+  rpc ApproveSupplierBill(ApproveSupplierBillRequest) returns (ApproveSupplierBillResponse);
+  rpc VoidSupplierBill(VoidSupplierBillRequest) returns (VoidSupplierBillResponse);
+  rpc RecordSupplierPayment(RecordSupplierPaymentRequest) returns (RecordSupplierPaymentResponse);
+}
+
+message ListInvoicesRequest {
+  // TODO: the request fields.
+}
+
+message ListInvoicesResponse {
+  // TODO: the response fields.
+}
+
+message GetInvoiceRequest {
+  // TODO: the request fields.
+}
+
+message GetInvoiceResponse {
+  // TODO: the response fields.
+}
+
+message GetInvoiceDownloadRequest {
+  // TODO: the request fields.
+}
+
+message GetInvoiceDownloadResponse {
+  // TODO: the response fields.
+}
+
+message PayInvoiceByCardRequest {
+  // TODO: the request fields.
+}
+
+message PayInvoiceByCardResponse {
+  // TODO: the response fields.
+}
+
+message RecordBankPaymentRequest {
+  // TODO: the request fields.
+}
+
+message RecordBankPaymentResponse {
+  // TODO: the response fields.
+}
+
+message IssueCreditNoteRequest {
+  // TODO: the request fields.
+}
+
+message IssueCreditNoteResponse {
+  // TODO: the response fields.
+}
+
+message RecordRefundRequest {
+  // TODO: the request fields.
+}
+
+message RecordRefundResponse {
+  // TODO: the response fields.
+}
+
+message GetSpendReportRequest {
+  // TODO: the request fields.
+}
+
+message GetSpendReportResponse {
+  // TODO: the response fields.
+}
+
+message DraftVatReturnRequest {
+  // TODO: the request fields.
+}
+
+message DraftVatReturnResponse {
+  // TODO: the response fields.
+}
+
+message MarkVatReturnFiledRequest {
+  // TODO: the request fields.
+}
+
+message MarkVatReturnFiledResponse {
+  // TODO: the response fields.
+}
+
+message GetTrialBalanceRequest {
+  // TODO: the request fields.
+}
+
+message GetTrialBalanceResponse {
+  // TODO: the response fields.
+}
+
+message ListSupplierBillsRequest {
+  // TODO: the request fields.
+}
+
+message ListSupplierBillsResponse {
+  // TODO: the response fields.
+}
+
+message GetSupplierBillRequest {
+  // TODO: the request fields.
+}
+
+message GetSupplierBillResponse {
+  // TODO: the response fields.
+}
+
+message ApproveSupplierBillRequest {
+  // TODO: the request fields.
+}
+
+message ApproveSupplierBillResponse {
+  // TODO: the response fields.
+}
+
+message VoidSupplierBillRequest {
+  // TODO: the request fields.
+}
+
+message VoidSupplierBillResponse {
+  // TODO: the response fields.
+}
+
+message RecordSupplierPaymentRequest {
+  // TODO: the request fields.
+}
+
+message RecordSupplierPaymentResponse {
+  // TODO: the response fields.
+}

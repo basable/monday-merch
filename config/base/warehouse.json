@@ -1,0 +1,16 @@
+{
+  "configSetName": "warehouse",
+  "items": [
+    {
+      "@type": "fulfilment.v1.WarehouseConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "title": "",
+      "country": "",
+      "operator": ""
+    }
+  ]
+}

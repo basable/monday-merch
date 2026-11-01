@@ -1,0 +1,15 @@
+{
+  "configSetName": "fulfilment_fee",
+  "items": [
+    {
+      "@type": "fulfilment.v1.FulfilmentFeeConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "currency": "",
+      "pack_handling_minor": 0,
+      "warehouse_inbound_minor": 0
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package fulfilment.v1;
+
+// FulfilmentService: the API of nanoservice `fulfilment`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service FulfilmentService {
+  rpc EstimateDelivery(EstimateDeliveryRequest) returns (EstimateDeliveryResponse);
+  rpc ListStock(ListStockRequest) returns (ListStockResponse);
+  rpc SetLowStockRule(SetLowStockRuleRequest) returns (SetLowStockRuleResponse);
+  rpc AdjustStock(AdjustStockRequest) returns (AdjustStockResponse);
+  rpc ListKits(ListKitsRequest) returns (ListKitsResponse);
+  rpc UpsertKit(UpsertKitRequest) returns (UpsertKitResponse);
+  rpc CreateAssemblyOrder(CreateAssemblyOrderRequest) returns (CreateAssemblyOrderResponse);
+  rpc RecordAssembly(RecordAssemblyRequest) returns (RecordAssemblyResponse);
+  rpc ListInbound(ListInboundRequest) returns (ListInboundResponse);
+  rpc RecordInboundReceipt(RecordInboundReceiptRequest) returns (RecordInboundReceiptResponse);
+  rpc CreateShipments(CreateShipmentsRequest) returns (CreateShipmentsResponse);
+  rpc ListShipments(ListShipmentsRequest) returns (ListShipmentsResponse);
+  rpc GetShipment(GetShipmentRequest) returns (GetShipmentResponse);
+  rpc RecordPick(RecordPickRequest) returns (RecordPickResponse);
+  rpc CancelShipment(CancelShipmentRequest) returns (CancelShipmentResponse);
+}
+
+message EstimateDeliveryRequest {
+  // TODO: the request fields.
+}
+
+message EstimateDeliveryResponse {
+  // TODO: the response fields.
+}
+
+message ListStockRequest {
+  // TODO: the request fields.
+}
+
+message ListStockResponse {
+  // TODO: the response fields.
+}
+
+message SetLowStockRuleRequest {
+  // TODO: the request fields.
+}
+
+message SetLowStockRuleResponse {
+  // TODO: the response fields.
+}
+
+message AdjustStockRequest {
+  // TODO: the request fields.
+}
+
+message AdjustStockResponse {
+  // TODO: the response fields.
+}
+
+message ListKitsRequest {
+  // TODO: the request fields.
+}
+
+message ListKitsResponse {
+  // TODO: the response fields.
+}
+
+message UpsertKitRequest {
+  // TODO: the request fields.
+}
+
+message UpsertKitResponse {
+  // TODO: the response fields.
+}
+
+message CreateAssemblyOrderRequest {
+  // TODO: the request fields.
+}
+
+message CreateAssemblyOrderResponse {
+  // TODO: the response fields.
+}
+
+message RecordAssemblyRequest {
+  // TODO: the request fields.
+}
+
+message RecordAssemblyResponse {
+  // TODO: the response fields.
+}
+
+message ListInboundRequest {
+  // TODO: the request fields.
+}
+
+message ListInboundResponse {
+  // TODO: the response fields.
+}
+
+message RecordInboundReceiptRequest {
+  // TODO: the request fields.
+}
+
+message RecordInboundReceiptResponse {
+  // TODO: the response fields.
+}
+
+message CreateShipmentsRequest {
+  // TODO: the request fields.
+}
+
+message CreateShipmentsResponse {
+  // TODO: the response fields.
+}
+
+message ListShipmentsRequest {
+  // TODO: the request fields.
+}
+
+message ListShipmentsResponse {
+  // TODO: the response fields.
+}
+
+message GetShipmentRequest {
+  // TODO: the request fields.
+}
+
+message GetShipmentResponse {
+  // TODO: the response fields.
+}
+
+message RecordPickRequest {
+  // TODO: the request fields.
+}
+
+message RecordPickResponse {
+  // TODO: the response fields.
+}
+
+message CancelShipmentRequest {
+  // TODO: the request fields.
+}
+
+message CancelShipmentResponse {
+  // TODO: the response fields.
+}

@@ -1,0 +1,14 @@
+{
+  "configSetName": "pricing_policy",
+  "items": [
+    {
+      "@type": "catalog.v1.PricingPolicyConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "express_fee_bps": 0,
+      "express_days_faster": 0
+    }
+  ]
+}

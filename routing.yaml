@@ -1,0 +1,311 @@
+# The durable topology of this application: one entry per nanoservice, the
+# messages it handles and the messages it sends. basable-messenger-gen reads
+# this file at build (tools/messenger.bzl) and generates the `interfaces`
+# crate (a handler trait with `handle_<snake_message>` per nanoservice, and a
+# sender exposing exactly the declared `send_<snake_message>` calls) and the
+# `messenger` crate (the concrete AppMessenger routing every declared pair).
+#
+# Semantics: a typed `response` is a strict 1:1 request (exactly one
+# handler); `response: error` is sequential fail-fast fan-out; no `response`
+# is a void fan-out event (0..N handlers). Every send and handle of one
+# message declares the same response. A nanoservice with no `handles` is
+# sends-only and is not a field of the router. The build names the YAML line
+# of every violation.
+#
+# Messages are plain Rust structs in crates/messages. Adding a message or a
+# nanoservice is an edit here; the build then tells you which methods are
+# missing. The scaffolder merges new nanoservice entries; it never removes.
+version: 1
+messenger:
+  name: AppMessenger
+  rust:
+    error_type: basable_core::AppError
+    ctx_type: basable_core::Ctx
+    uses: ["messages::*"]
+nanoservices:
+  # The Connect boundary: sends-only, one request per API method.
+  - name: api
+    sends:
+      - {message: GetCompanyRequest, response: Company}
+      - {message: UpdateCompanyRequest, response: Company}
+      - {message: ListMembersRequest, response: MemberList}
+      - {message: InviteMemberRequest, response: Member}
+      - {message: UpdateMemberRequest, response: Member}
+      - {message: RemoveMemberRequest, response: Member}
+      - {message: ListDepartmentsRequest, response: DepartmentList}
+      - {message: UpsertDepartmentRequest, response: Department}
+      - {message: ListAddressesRequest, response: AddressList}
+      - {message: UpsertAddressRequest, response: Address}
+      - {message: ListRecipientsRequest, response: RecipientList}
+      - {message: UpsertRecipientRequest, response: Recipient}
+      - {message: ImportRecipientsRequest, response: RecipientImportResult}
+      - {message: EraseRecipientRequest, response: Recipient}
+      - {message: ListAuditEventsRequest, response: AuditEventList}
+      - {message: ListProductsRequest, response: ProductPage}
+      - {message: GetProductRequest, response: Product}
+      - {message: ListCategoriesRequest, response: CategoryList}
+      - {message: PriceLinesRequest, response: PricedLines}
+      - {message: UpsertProductRequest, response: Product}
+      - {message: UpsertVariantRequest, response: Variant}
+      - {message: SetPriceTiersRequest, response: Product}
+      - {message: SetDecorationOptionsRequest, response: Product}
+      - {message: SetSupplierOffersRequest, response: SupplierOffers}
+      - {message: CreateImageUploadRequest, response: ImageUpload}
+      - {message: ArchiveProductRequest, response: Product}
+      - {message: GetBrandProfileRequest, response: BrandProfile}
+      - {message: UpdateBrandProfileRequest, response: BrandProfile}
+      - {message: ListBrandAssetsRequest, response: BrandAssetList}
+      - {message: CreateAssetUploadRequest, response: AssetUpload}
+      - {message: ConfirmAssetUploadRequest, response: BrandAsset}
+      - {message: DeleteBrandAssetRequest, response: BrandAsset}
+      - {message: CreateProofRequest, response: Proof}
+      - {message: ListProofsRequest, response: ProofList}
+      - {message: CreateDesignRequest, response: DesignDocument}
+      - {message: GetDesignRequest, response: DesignDocument}
+      - {message: ListDesignsRequest, response: DesignList}
+      - {message: SaveDesignDraftRequest, response: DesignDocument}
+      - {message: SaveDesignVersionRequest, response: DesignVersion}
+      - {message: ArchiveDesignRequest, response: DesignDocument}
+      - {message: CreatePreviewUploadRequest, response: PreviewUpload}
+      - {message: ListDesignTemplatesRequest, response: DesignTemplateList}
+      - {message: GetDesignTemplateRequest, response: DesignTemplate}
+      - {message: UpsertDesignTemplateRequest, response: DesignTemplate}
+      - {message: RequestQuoteRequest, response: Quote}
+      - {message: ListQuotesRequest, response: QuoteList}
+      - {message: GetQuoteRequest, response: Quote}
+      - {message: AssignQuoteRequest, response: Quote}
+      - {message: PublishQuoteVersionRequest, response: Quote}
+      - {message: RequestQuoteChangesRequest, response: Quote}
+      - {message: AcceptQuoteRequest, response: Order}
+      - {message: ReorderRequest, response: Quote}
+      - {message: ListOrdersRequest, response: OrderList}
+      - {message: GetOrderRequest, response: Order}
+      - {message: CancelOrderRequest, response: Order}
+      - {message: ListProductionRunsRequest, response: ProductionRunList}
+      - {message: RecordProductionEventRequest, response: ProductionRun}
+      - {message: SubmitLeadRequest, response: LeadAck}
+      - {message: EstimateDeliveryRequest, response: DeliveryEstimate}
+      - {message: ListStockRequest, response: StockList}
+      - {message: SetLowStockRuleRequest, response: LowStockRule}
+      - {message: AdjustStockRequest, response: StockLevel}
+      - {message: ListKitsRequest, response: KitList}
+      - {message: UpsertKitRequest, response: Kit}
+      - {message: CreateAssemblyOrderRequest, response: AssemblyOrder}
+      - {message: RecordAssemblyRequest, response: AssemblyOrder}
+      - {message: ListInboundRequest, response: InboundList}
+      - {message: RecordInboundReceiptRequest, response: Inbound}
+      - {message: CreateShipmentsRequest, response: ShipmentBatch}
+      - {message: ListShipmentsRequest, response: ShipmentList}
+      - {message: GetShipmentRequest, response: Shipment}
+      - {message: RecordPickRequest, response: Shipment}
+      - {message: CancelShipmentRequest, response: Shipment}
+      - {message: ListInvoicesRequest, response: InvoiceList}
+      - {message: GetInvoiceRequest, response: Invoice}
+      - {message: GetInvoiceDownloadRequest, response: DownloadLink}
+      - {message: PayInvoiceByCardRequest, response: CheckoutLink}
+      - {message: RecordBankPaymentRequest, response: Payment}
+      - {message: IssueCreditNoteRequest, response: Invoice}
+      - {message: RecordRefundRequest, response: Payment}
+      - {message: GetSpendReportRequest, response: SpendReport}
+      - {message: DraftVatReturnRequest, response: VatReturn}
+      - {message: MarkVatReturnFiledRequest, response: VatReturn}
+      - {message: GetTrialBalanceRequest, response: TrialBalance}
+      - {message: ListSupplierBillsRequest, response: SupplierBillList}
+      - {message: GetSupplierBillRequest, response: SupplierBill}
+      - {message: ApproveSupplierBillRequest, response: SupplierBill}
+      - {message: VoidSupplierBillRequest, response: SupplierBill}
+      - {message: RecordSupplierPaymentRequest, response: Payment}
+      - {message: ListInboundMessagesRequest, response: InboundMessageList}
+      - {message: ListReviewQueueRequest, response: InboundDocumentList}
+      - {message: GetInboundDocumentRequest, response: InboundDocument}
+      - {message: GetInboundFileLinkRequest, response: DownloadLink}
+      - {message: DecideInboundDocumentRequest, response: InboundDocument}
+  - name: account
+    handles:
+      - {message: GetCompanyRequest, response: Company}
+      - {message: UpdateCompanyRequest, response: Company}
+      - {message: EnsureCompanyRequest, response: Company}
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: ListMembersRequest, response: MemberList}
+      - {message: InviteMemberRequest, response: Member}
+      - {message: UpdateMemberRequest, response: Member}
+      - {message: RemoveMemberRequest, response: Member}
+      - {message: ListDepartmentsRequest, response: DepartmentList}
+      - {message: UpsertDepartmentRequest, response: Department}
+      - {message: ListAddressesRequest, response: AddressList}
+      - {message: UpsertAddressRequest, response: Address}
+      - {message: ListRecipientsRequest, response: RecipientList}
+      - {message: UpsertRecipientRequest, response: Recipient}
+      - {message: ImportRecipientsRequest, response: RecipientImportResult}
+      - {message: EraseRecipientRequest, response: Recipient}
+      - {message: ResolveRecipientsRequest, response: RecipientList}
+      - {message: ListAuditEventsRequest, response: AuditEventList}
+      - {message: AuditEvent}
+    sends:
+      - {message: SendEmailRequest, response: EmailReceipt}
+  - name: catalog
+    handles:
+      - {message: ListProductsRequest, response: ProductPage}
+      - {message: GetProductRequest, response: Product}
+      - {message: ListCategoriesRequest, response: CategoryList}
+      - {message: PriceLinesRequest, response: PricedLines}
+      - {message: UpsertProductRequest, response: Product}
+      - {message: UpsertVariantRequest, response: Variant}
+      - {message: SetPriceTiersRequest, response: Product}
+      - {message: SetDecorationOptionsRequest, response: Product}
+      - {message: SetSupplierOffersRequest, response: SupplierOffers}
+      - {message: CreateImageUploadRequest, response: ImageUpload}
+      - {message: ArchiveProductRequest, response: Product}
+      - {message: GetSupplierOffersRequest, response: SupplierOffers}
+      - {message: GetCustomsDataRequest, response: CustomsData}
+      - {message: MatchSupplierRequest, response: SupplierMatch}
+      - {message: RenderShopPageRequest, response: ShopPage}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: AuditEvent}
+  - name: design
+    handles:
+      - {message: GetBrandProfileRequest, response: BrandProfile}
+      - {message: UpdateBrandProfileRequest, response: BrandProfile}
+      - {message: ListBrandAssetsRequest, response: BrandAssetList}
+      - {message: CreateAssetUploadRequest, response: AssetUpload}
+      - {message: ConfirmAssetUploadRequest, response: BrandAsset}
+      - {message: DeleteBrandAssetRequest, response: BrandAsset}
+      - {message: CreateProofRequest, response: Proof}
+      - {message: ListProofsRequest, response: ProofList}
+      - {message: ApproveProofsRequest, response: ProofApproval}
+      - {message: GetApprovedArtworkRequest, response: ArtworkBundle}
+      - {message: CreateDesignRequest, response: DesignDocument}
+      - {message: GetDesignRequest, response: DesignDocument}
+      - {message: ListDesignsRequest, response: DesignList}
+      - {message: SaveDesignDraftRequest, response: DesignDocument}
+      - {message: SaveDesignVersionRequest, response: DesignVersion}
+      - {message: ArchiveDesignRequest, response: DesignDocument}
+      - {message: CreatePreviewUploadRequest, response: PreviewUpload}
+      - {message: ListDesignTemplatesRequest, response: DesignTemplateList}
+      - {message: GetDesignTemplateRequest, response: DesignTemplate}
+      - {message: UpsertDesignTemplateRequest, response: DesignTemplate}
+      - {message: ResolveDesignVersionRequest, response: DesignVersionRef}
+      - {message: AdoptDesignsRequest, response: DesignAdoption}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: AuditEvent}
+  - name: order
+    handles:
+      - {message: RequestQuoteRequest, response: Quote}
+      - {message: ListQuotesRequest, response: QuoteList}
+      - {message: GetQuoteRequest, response: Quote}
+      - {message: AssignQuoteRequest, response: Quote}
+      - {message: PublishQuoteVersionRequest, response: Quote}
+      - {message: RequestQuoteChangesRequest, response: Quote}
+      - {message: AcceptQuoteRequest, response: Order}
+      - {message: ReorderRequest, response: Quote}
+      - {message: ListOrdersRequest, response: OrderList}
+      - {message: GetOrderRequest, response: Order}
+      - {message: CancelOrderRequest, response: Order}
+      - {message: ListProductionRunsRequest, response: ProductionRunList}
+      - {message: RecordProductionEventRequest, response: ProductionRun}
+      - {message: SubmitLeadRequest, response: LeadAck}
+      - {message: RecordSupplierUpdateRequest, response: ProductionRun}
+      - {message: IngestCustomerEmailRequest, response: Quote}
+      - {message: GetPurchaseMatchRequest, response: PurchaseMatch}
+      - {message: InvoiceChanged}
+      - {message: InboundChanged}
+      - {message: ShipmentChanged}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: GetCompanyRequest, response: Company}
+      - {message: EnsureCompanyRequest, response: Company}
+      - {message: PriceLinesRequest, response: PricedLines}
+      - {message: GetSupplierOffersRequest, response: SupplierOffers}
+      - {message: ListProofsRequest, response: ProofList}
+      - {message: ApproveProofsRequest, response: ProofApproval}
+      - {message: GetApprovedArtworkRequest, response: ArtworkBundle}
+      - {message: ResolveDesignVersionRequest, response: DesignVersionRef}
+      - {message: AdoptDesignsRequest, response: DesignAdoption}
+      - {message: EnsureInvoiceRequest, response: Invoice}
+      - {message: GetInvoiceRequest, response: Invoice}
+      - {message: EnsureInboundRequest, response: Inbound}
+      - {message: GetInboundRequest, response: Inbound}
+      - {message: EnsureShipmentRequest, response: Shipment}
+      - {message: GetShipmentRequest, response: Shipment}
+      - {message: SendEmailRequest, response: EmailReceipt}
+      - {message: AuditEvent}
+  - name: fulfilment
+    handles:
+      - {message: EstimateDeliveryRequest, response: DeliveryEstimate}
+      - {message: ListStockRequest, response: StockList}
+      - {message: SetLowStockRuleRequest, response: LowStockRule}
+      - {message: AdjustStockRequest, response: StockLevel}
+      - {message: ListKitsRequest, response: KitList}
+      - {message: UpsertKitRequest, response: Kit}
+      - {message: CreateAssemblyOrderRequest, response: AssemblyOrder}
+      - {message: RecordAssemblyRequest, response: AssemblyOrder}
+      - {message: ListInboundRequest, response: InboundList}
+      - {message: RecordInboundReceiptRequest, response: Inbound}
+      - {message: CreateShipmentsRequest, response: ShipmentBatch}
+      - {message: ListShipmentsRequest, response: ShipmentList}
+      - {message: GetShipmentRequest, response: Shipment}
+      - {message: RecordPickRequest, response: Shipment}
+      - {message: CancelShipmentRequest, response: Shipment}
+      - {message: EnsureInboundRequest, response: Inbound}
+      - {message: GetInboundRequest, response: Inbound}
+      - {message: EnsureShipmentRequest, response: Shipment}
+      - {message: CarrierWebhookEvent, response: WebhookAck}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: ResolveRecipientsRequest, response: RecipientList}
+      - {message: GetCustomsDataRequest, response: CustomsData}
+      - {message: EnsureInvoiceRequest, response: Invoice}
+      - {message: SendEmailRequest, response: EmailReceipt}
+      - {message: InboundChanged}
+      - {message: ShipmentChanged}
+      - {message: AuditEvent}
+  - name: billing
+    handles:
+      - {message: EnsureInvoiceRequest, response: Invoice}
+      - {message: ListInvoicesRequest, response: InvoiceList}
+      - {message: GetInvoiceRequest, response: Invoice}
+      - {message: GetInvoiceDownloadRequest, response: DownloadLink}
+      - {message: PayInvoiceByCardRequest, response: CheckoutLink}
+      - {message: RecordBankPaymentRequest, response: Payment}
+      - {message: IssueCreditNoteRequest, response: Invoice}
+      - {message: RecordRefundRequest, response: Payment}
+      - {message: GetSpendReportRequest, response: SpendReport}
+      - {message: DraftVatReturnRequest, response: VatReturn}
+      - {message: MarkVatReturnFiledRequest, response: VatReturn}
+      - {message: GetTrialBalanceRequest, response: TrialBalance}
+      - {message: EnsureSupplierBillRequest, response: SupplierBill}
+      - {message: ListSupplierBillsRequest, response: SupplierBillList}
+      - {message: GetSupplierBillRequest, response: SupplierBill}
+      - {message: ApproveSupplierBillRequest, response: SupplierBill}
+      - {message: VoidSupplierBillRequest, response: SupplierBill}
+      - {message: RecordSupplierPaymentRequest, response: Payment}
+      - {message: PaymentWebhookEvent, response: WebhookAck}
+      - {message: Book, response: Booked}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: GetCompanyRequest, response: Company}
+      - {message: GetPurchaseMatchRequest, response: PurchaseMatch}
+      - {message: SendEmailRequest, response: EmailReceipt}
+      - {message: InvoiceChanged}
+      - {message: AuditEvent}
+  - name: notifier
+    handles:
+      - {message: SendEmailRequest, response: EmailReceipt}
+  - name: inbox
+    handles:
+      - {message: ListInboundMessagesRequest, response: InboundMessageList}
+      - {message: ListReviewQueueRequest, response: InboundDocumentList}
+      - {message: GetInboundDocumentRequest, response: InboundDocument}
+      - {message: GetInboundFileLinkRequest, response: DownloadLink}
+      - {message: DecideInboundDocumentRequest, response: InboundDocument}
+      - {message: InboundEmailEvent, response: WebhookAck}
+    sends:
+      - {message: ResolveMemberRequest, response: Member}
+      - {message: MatchSupplierRequest, response: SupplierMatch}
+      - {message: EnsureSupplierBillRequest, response: SupplierBill}
+      - {message: RecordSupplierUpdateRequest, response: ProductionRun}
+      - {message: IngestCustomerEmailRequest, response: Quote}
+      - {message: SendEmailRequest, response: EmailReceipt}
+      - {message: AuditEvent}

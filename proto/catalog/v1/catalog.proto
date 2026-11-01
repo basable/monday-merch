@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+// CatalogService: the API of nanoservice `catalog`. Fill the
+// message fields; the build regenerates the Rust types and the Connect stubs.
+service CatalogService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  rpc PriceLines(PriceLinesRequest) returns (PriceLinesResponse);
+  rpc UpsertProduct(UpsertProductRequest) returns (UpsertProductResponse);
+  rpc UpsertVariant(UpsertVariantRequest) returns (UpsertVariantResponse);
+  rpc SetPriceTiers(SetPriceTiersRequest) returns (SetPriceTiersResponse);
+  rpc SetDecorationOptions(SetDecorationOptionsRequest) returns (SetDecorationOptionsResponse);
+  rpc SetSupplierOffers(SetSupplierOffersRequest) returns (SetSupplierOffersResponse);
+  rpc CreateImageUpload(CreateImageUploadRequest) returns (CreateImageUploadResponse);
+  rpc ArchiveProduct(ArchiveProductRequest) returns (ArchiveProductResponse);
+}
+
+message ListProductsRequest {
+  // TODO: the request fields.
+}
+
+message ListProductsResponse {
+  // TODO: the response fields.
+}
+
+message GetProductRequest {
+  // TODO: the request fields.
+}
+
+message GetProductResponse {
+  // TODO: the response fields.
+}
+
+message ListCategoriesRequest {
+  // TODO: the request fields.
+}
+
+message ListCategoriesResponse {
+  // TODO: the response fields.
+}
+
+message PriceLinesRequest {
+  // TODO: the request fields.
+}
+
+message PriceLinesResponse {
+  // TODO: the response fields.
+}
+
+message UpsertProductRequest {
+  // TODO: the request fields.
+}
+
+message UpsertProductResponse {
+  // TODO: the response fields.
+}
+
+message UpsertVariantRequest {
+  // TODO: the request fields.
+}
+
+message UpsertVariantResponse {
+  // TODO: the response fields.
+}
+
+message SetPriceTiersRequest {
+  // TODO: the request fields.
+}
+
+message SetPriceTiersResponse {
+  // TODO: the response fields.
+}
+
+message SetDecorationOptionsRequest {
+  // TODO: the request fields.
+}
+
+message SetDecorationOptionsResponse {
+  // TODO: the response fields.
+}
+
+message SetSupplierOffersRequest {
+  // TODO: the request fields.
+}
+
+message SetSupplierOffersResponse {
+  // TODO: the response fields.
+}
+
+message CreateImageUploadRequest {
+  // TODO: the request fields.
+}
+
+message CreateImageUploadResponse {
+  // TODO: the response fields.
+}
+
+message ArchiveProductRequest {
+  // TODO: the request fields.
+}
+
+message ArchiveProductResponse {
+  // TODO: the response fields.
+}

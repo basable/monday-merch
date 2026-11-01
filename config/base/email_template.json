@@ -1,0 +1,17 @@
+{
+  "configSetName": "email_template",
+  "items": [
+    {
+      "@type": "notifier.v1.EmailTemplateConfiguration",
+      "header": {
+        "namespace": "#{NamespaceConfiguration:default}",
+        "name": "example"
+      },
+      "slug": "",
+      "locale": "",
+      "subject": "",
+      "body_html": "",
+      "body_text": ""
+    }
+  ]
+}

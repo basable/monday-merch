@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package order.v1;
+
+import "basable/config/v1/config.proto";
+
+// The configuration messages nanoservice `order` declares. Each
+// embeds the ConfigHeader; a reference field is a string that holds a
+// #{Type:namespace:name} reference in the seed and the target's id once
+// loaded. Edit the plan's configTypes, not this file.
+
+// QuotePolicyConfiguration (id 108, public ids `qpol_…`).
+message QuotePolicyConfiguration {
+  basable.config.v1.ConfigHeader header = 1;
+  int32 sla_hours = 2;
+  int32 sla_alert_hours = 3;
+  int32 validity_days = 4;
+}
