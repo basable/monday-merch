@@ -156,9 +156,10 @@ nanoservices:
             - { name: weight_grams, type: int32 }
             - { name: hs_code, type: string, nullable: true }
             - { name: origin_country, type: string, nullable: true }
-            - { name: status, type: string }
+            - { name: published_at, type: timestamp, nullable: true }
+            - { name: archived_at, type: timestamp, nullable: true }
             - { name: search_text, type: string }
-          indexes: [ { columns: [category_slug] }, { columns: [status] } ]
+          indexes: [ { columns: [category_slug] }, { columns: [archived_at] } ]
         - name: variant
           columns:
             - { name: id, type: uuid, primaryKey: true }
@@ -166,7 +167,7 @@ nanoservices:
             - { name: colour_slug, type: string }
             - { name: sku, type: string, unique: true }
             - { name: sizes, type: json }
-            - { name: status, type: string }
+            - { name: archived_at, type: timestamp, nullable: true }
           indexes: [ { columns: [product_id] } ]
         - name: price_tier
           columns:
@@ -338,7 +339,7 @@ nanoservices:
             - { name: draft, type: json }
             - { name: schema_version, type: int32 }
             - { name: revision, type: int32 }
-            - { name: status, type: string }
+            - { name: archived_at, type: timestamp, nullable: true }
             - { name: created_at, type: timestamp }
             - { name: updated_at, type: timestamp }
           indexes: [ { columns: [company_id] }, { columns: [owner_identity_id] } ]
@@ -363,7 +364,7 @@ nanoservices:
             - { name: document, type: json }
             - { name: schema_version, type: int32 }
             - { name: preview_key, type: string }
-            - { name: status, type: string }
+            - { name: published_at, type: timestamp, nullable: true }
             - { name: sort_order, type: int32 }
           indexes: [ { columns: [kind] } ]
       configTypes:
@@ -431,6 +432,31 @@ nanoservices:
     description: Takes a request from quote to signature, then drives each order through invoicing, production and delivery.
     owns:
       processingObjects:
+        - name: quote
+          prefix: quo
+          spec:
+            - { name: contact, type: json }
+            - { name: contact_email, type: string, immutable: true }
+            - { name: company_id, type: uuid, nullable: true }
+            - { name: delivery, type: json }
+            - { name: timeline, type: string }
+            - { name: deadline_note, type: string, nullable: true }
+            - { name: consultant_id, type: uuid, nullable: true }
+            - { name: published_version, type: int32 }
+            - { name: valid_until, type: timestamp, nullable: true }
+            - { name: withdrawn, type: bool }
+            - { name: requested_at, type: timestamp, immutable: true }
+            - { name: sla_due_at, type: timestamp, immutable: true }
+            - { name: source_order_id, type: uuid, nullable: true, immutable: true }
+            - { name: source_document_id, type: uuid, nullable: true, immutable: true }
+          status:
+            - { name: phase, type: string }
+            - { name: sla_alerted_at, type: timestamp, nullable: true }
+            - { name: sent_version, type: int32 }
+            - { name: send_intent_at, type: timestamp, nullable: true }
+            - { name: signed_version, type: int32, nullable: true }
+            - { name: order_id, type: uuid, nullable: true }
+            - { name: expired_at, type: timestamp, nullable: true }
         - name: order
           prefix: ord
           spec:
@@ -473,26 +499,6 @@ nanoservices:
             - { name: carrier, type: string, nullable: true }
             - { name: tracking_number, type: string, nullable: true }
       tables:
-        - name: quote
-          columns:
-            - { name: id, type: uuid, primaryKey: true }
-            - { name: number, type: string, unique: true }
-            - { name: company_id, type: uuid, nullable: true }
-            - { name: contact, type: json }
-            - { name: contact_email, type: string }
-            - { name: delivery, type: json }
-            - { name: timeline, type: string }
-            - { name: deadline_note, type: string, nullable: true }
-            - { name: status, type: string }
-            - { name: consultant_id, type: uuid, nullable: true }
-            - { name: current_version, type: int32 }
-            - { name: requested_at, type: timestamp }
-            - { name: sla_due_at, type: timestamp }
-            - { name: sla_alerted_at, type: timestamp, nullable: true }
-            - { name: valid_until, type: timestamp, nullable: true }
-            - { name: source_order_id, type: uuid, nullable: true }
-            - { name: order_id, type: uuid, nullable: true }
-          indexes: [ { columns: [company_id] }, { columns: [contact_email] }, { columns: [status, sla_due_at] } ]
         - name: quote_version
           columns:
             - { name: id, type: uuid, primaryKey: true }
@@ -552,7 +558,7 @@ nanoservices:
             - { name: sla_alert_hours, type: int32 }
             - { name: validity_days, type: int32 }
     schedules:
-      - { name: sweep_quotes, every: 15m }
+      - { name: purge_leads, every: 24h }
     handles:
       - { message: RequestQuoteRequest, response: Quote }
       - { message: ListQuotesRequest, response: QuoteList }
@@ -685,8 +691,8 @@ nanoservices:
             - { name: kit_item_id, type: uuid }
             - { name: warehouse_slug, type: string }
             - { name: quantity, type: int32 }
-            - { name: status, type: string }
             - { name: completed_at, type: timestamp, nullable: true }
+            - { name: cancelled_at, type: timestamp, nullable: true }
           indexes: [ { columns: [company_id] } ]
         - name: inbound
           columns:
@@ -696,10 +702,9 @@ nanoservices:
             - { name: company_id, type: uuid }
             - { name: warehouse_slug, type: string }
             - { name: lines, type: json }
-            - { name: status, type: string }
             - { name: received_lines, type: json }
             - { name: received_at, type: timestamp, nullable: true }
-          indexes: [ { columns: [status] } ]
+          indexes: [ { columns: [received_at] } ]
         - name: low_stock_rule
           columns:
             - { name: id, type: uuid, primaryKey: true }

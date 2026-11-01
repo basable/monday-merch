@@ -32,7 +32,7 @@ On `basable-testkit`, with Postgres in testcontainers and one database per test.
 - **Tenant isolation:** company A's member calls every customer method with company B's ids and gets refused. Generate the method list from the manifest so a new method cannot be missed. This is the most important security test in a multi-tenant product.
 - **Role checks:** every staff method refuses a customer, and every customer write refuses a `viewer`.
 - **Cost privacy:** no public or customer response contains supplier cost.
-- **Crash recovery:** kill an attempt between every effect and its status write in `order`, `production_run`, `shipment`, `invoice` and `payment`. The next pass converges with no duplicate effect.
+- **Crash recovery:** kill an attempt between every effect and its status write in `quote`, `order`, `production_run`, `shipment`, `invoice` and `payment`. The next pass converges with no duplicate effect.
 - **Two replicas:** run two workers per type against one database, and each object is driven by one at a time.
 - **Stock concurrency:** parallel reservations never oversell, and counts match movements.
 - **Invoice sequence:** concurrent issuing gives a gap-free sequence per series.

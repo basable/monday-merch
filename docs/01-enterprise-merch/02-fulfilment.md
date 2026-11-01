@@ -14,9 +14,9 @@ Goods in the building and goods on the road. A stock count is a quantity, not mo
 
 **`kit_component`** defines a merch pack: `kit_item_id`, `component_item_id`, `quantity`.
 
-**`assembly_order`** is a request to build packs: `company_id`, `kit_item_id`, `warehouse_slug`, `quantity`, `status`, `completed_at`. It is plain because a person does the work and records it, and nothing needs driving.
+**`assembly_order`** is a request to build packs: `company_id`, `kit_item_id`, `warehouse_slug`, `quantity`, `completed_at`, `cancelled_at`. It is plain because a person does the work and records it, and nothing needs driving.
 
-**`inbound`** is goods expected from a supplier: `name` (the run's name, unique), `source_generation` (highest accepted, lower ones dropped), `company_id`, `warehouse_slug`, `lines`, `status`, `received_lines`, `received_at`.
+**`inbound`** is goods expected from a supplier: `name` (the run's name, unique), `source_generation` (highest accepted, lower ones dropped), `company_id`, `warehouse_slug`, `lines`, `received_lines`, `received_at`. Whether goods are expected, partial or complete follows from those fields.
 
 **`low_stock_rule`**: `stock_item_id`, `threshold`, `notify_email`.
 

@@ -18,11 +18,11 @@ Asked separately (see `00-scope.md`): brand import from a name or website, 3D pr
 
 ## Tables
 
-**`design_document`** is one design being worked on: `company_id`, `owner_identity_id`, `product_id`, `variant_id`, `name`, `draft`, `schema_version`, `revision`, `status` (`draft`, `submitted`, `archived`), `created_at`, `updated_at`.
+**`design_document`** is one design being worked on: `company_id`, `owner_identity_id`, `product_id`, `variant_id`, `name`, `draft`, `schema_version`, `revision`, `archived_at`, `created_at`, `updated_at`.
 
 **`design_version`** is an immutable snapshot, taken on an explicit save or when a design joins a quote: `design_id`, `version`, `document`, `schema_version`, `preview_keys`, `created_by`, `created_at`.
 
-**`design_template`** is a starting point: `slug`, `title`, `kind` (`apparel`, `card`, `poster`, `flyer`), `product_id`, `document`, `schema_version`, `preview_key`, `status`, `sort_order`. It is a plain table, not a config catalog, because designers publish templates from the Studio and should not need an engineer and a deploy. Templates must be the competitor's own work.
+**`design_template`** is a starting point: `slug`, `title`, `kind` (`apparel`, `card`, `poster`, `flyer`), `product_id`, `document`, `schema_version`, `preview_key`, `published_at`, `sort_order`. It is a plain table, not a config catalog, because designers publish templates from the Studio and should not need an engineer and a deploy. Templates must be the competitor's own work.
 
 **`brand_profile`** is one row per company (`company_id`): `colours`, `fonts`, `guidelines`, `updated_at`.
 

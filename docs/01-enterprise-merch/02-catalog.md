@@ -4,9 +4,9 @@ What can be bought and at what list price, and the public shop pages. No lifecyc
 
 ## Tables
 
-**`product`** carries `slug` (unique, used in URLs), `name`, `description`, `category_slug`, `brand_slug`, `collections`, `attributes` (materials, fabric weight, fit and so on, as JSON because they differ per category), `impact_note`, `sustainability_labels`, `min_qty`, `production_days`, `customisable`, `best_selling`, `is_new`, and `status` (`draft`, `active`, `archived`). `search_text` backs Postgres full-text search through a GIN index added in a follow-up migration. `weight_grams`, `hs_code` and `origin_country` exist for labels and customs.
+**`product`** carries `slug` (unique, used in URLs), `name`, `description`, `category_slug`, `brand_slug`, `collections`, `attributes` (materials, fabric weight, fit and so on, as JSON because they differ per category), `impact_note`, `sustainability_labels`, `min_qty`, `production_days`, `customisable`, `best_selling`, `is_new`, and the facts `published_at` and `archived_at`: a product is public once published and until archived, and nothing drives it between them. `search_text` backs Postgres full-text search through a GIN index added in a follow-up migration. `weight_grams`, `hs_code` and `origin_country` exist for labels and customs.
 
-**`variant`** is one colour of a product: `product_id`, `colour_slug`, `sku` (unique), `sizes`, `status`.
+**`variant`** is one colour of a product: `product_id`, `colour_slug`, `sku` (unique), `sizes`, `archived_at`.
 
 **`price_tier`** is one quantity break: `product_id`, `currency`, `min_qty`, `unit_minor`. Amounts are integer minor units.
 

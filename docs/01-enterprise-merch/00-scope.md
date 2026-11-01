@@ -186,6 +186,8 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 
 **Then, in the user's words:** "firstmost i want a automated system for receving and parsing emails/invoices", which added the `inbox` nanoservice and supplier bills. And "Goal set: get the preview live", which ended this round of questions so the skeleton could render.
 
+**The scaffold's validator** then refused hand-driven `status` columns on plain tables. `quote` was a real lifecycle, so it became a processing object. The other six only recorded facts, so they became timestamps.
+
 ## Build order
 
 The user's priority sets the order. Everything renders at once, and these are the order to fill in the logic:

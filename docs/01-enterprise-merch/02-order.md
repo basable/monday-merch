@@ -1,37 +1,52 @@
 # 02: order
 
-From a visitor's request to a delivered order. A quote is plain tables, because its waits are timestamps a ticker can check. An order and a production run are lifecycles, because each waits on people and other systems over days and must be re-driven until it matches. Directive §3, §5, §6 bind the processing-object types, §2 every table, §7 every message.
+From a visitor's request to a delivered order. A quote, an order and a production run are all lifecycles, because each waits on people and other systems over days and must be re-driven until it matches. Directive §3, §5, §6 bind the processing-object types, §2 every table, §7 every message.
 
 **Round 1 decided self-serve checkout `later`.** Every order comes from a signed quote.
 
-## Quote: plain tables
+## Processing object: `quote`
 
-Status runs: `requested` → `in_progress` → `sent` ⇄ `changes_requested` → `accepted`, or to `expired` or `withdrawn`.
+A quote waits on a consultant within a 24-hour promise, then on a customer who may ask for changes several times, and it expires. That is a multi-step lifecycle (Directive §1), so it is not a status column driven by hand.
 
-**`quote`**: `number`, `company_id` (empty for an anonymous request until signature), `contact`, `contact_email`, `delivery` (one address, a saved address, or a mode from the list below), `timeline` (`standard` or `express`), `deadline_note`, `status`, `consultant_id`, `current_version`, `requested_at`, `sla_due_at`, `sla_alerted_at`, `valid_until`, `source_order_id` (for a reorder), `order_id`.
+**Spec**, a person's intent: `contact`, `contact_email`, `company_id` (empty for an anonymous request until signature), `delivery` (one address, a saved address, or a mode from the list below), `timeline` (`standard` or `express`), `deadline_note`, `consultant_id`, `published_version`, `valid_until`, `withdrawn`, `requested_at`, `sla_due_at`, `source_order_id` (for a reorder), `source_document_id` (when it came from an email).
 
-**`quote_version`** is what the customer sees: `quote_id`, `version`, `lines`, `shipping_minor`, `handling_minor`, `currency`, `note`, `published_at`, `published_by`. Quotes exclude VAT, which is added on the invoice.
+**Status**: `phase` (`requested`, `in_progress`, `sent`, `changes_requested`, `accepted`, `expired`, `withdrawn`), `sla_alerted_at`, `sent_version`, `send_intent_at`, `signed_version`, `order_id`, `expired_at`.
+
+**Reconcile pass:**
+
+| Level | Checks | Drives | Outcome |
+| --- | --- | --- | --- |
+| Deleting | `meta.deleting()` | Test path only | `Delete` |
+| Withdrawn | `withdrawn` | Nothing further | `Settled` |
+| Signed | A `quote_signature` for the `published_version` | `EnsureCompanyRequest` when there is no company, then `AdoptDesignsRequest`, `ApproveProofsRequest`, then `TypedStore::create` the `order`, named by the quote. All idempotent, so a crash at any point just repeats safely. | `Settled` at `accepted` |
+| Expired | `valid_until` passed | Sets `expired_at` | `Settled`. Publishing a new version re-arms it. |
+| Changes | A `quote_comment` newer than the published version | Alerts the consultant | `Converged.after` the SLA |
+| Send | `sent_version` below `published_version` | `claim.write_status` with `send_intent_at`, then `SendEmailRequest` key `quote:<id>:v<n>` | `Retry` on failure |
+| SLA | Nothing published yet | At `sla_alert_hours`, alerts the consultant once and stamps `sla_alerted_at` | `Converged.after` the next deadline |
+| Waiting | Sent, not signed | Nothing | `Converged.after` `valid_until` |
+
+**Worker:** resync 1h, backoff 30s to 15m, `max_attempts` 0, attempt timeout 60s.
+
+Input without a claim goes in side tables, then a `nudge` (Directive §3, invariant 3):
+
+**`quote_version`** is what the customer sees: `quote_id`, `version`, `lines`, `shipping_minor`, `handling_minor`, `currency`, `note`, `published_at`, `published_by`. Quotes exclude VAT, which is added on the invoice. `PublishQuoteVersion` writes the row, then sets `published_version` through `update_spec`.
 
 **`quote_signature`** is append-only evidence: `quote_id`, `version`, `signer_identity_id`, `signer_name`, `signer_email`, `po_number`, `signed_at`.
 
 **`quote_comment`** is the conversation: `quote_id`, `author`, `body`, `created_at`.
 
-**`lead`** is a contact-form message: `email`, `name`, `company_name`, `message`, `created_at`, `erase_after`.
-
 Quote invariants:
 
 - A published `quote_version` never changes. A correction is a new version, and it resets the customer's review.
-- Signing names an exact version and is a compare-and-set: `status = 'sent' AND current_version = $v AND valid_until > now()`. A second click with the same version returns the same order.
+- `AcceptQuote` writes a signature naming an exact version, refusing a stale version or an expired quote. A signature on a version that is no longer published does nothing, so the pass acts only on the current one. Signing twice returns the same order.
 - Signing requires a Kratos session whose verified email is `contact_email` or a member of `company_id`. This proves mailbox control before a company is created.
 - No changes after signature. `CancelOrder` is staff-only.
 
 A quote line may name a Studio design. That needs a signed-in owner, and `order` turns it into a fixed version with `ResolveDesignVersionRequest`. `RequestQuote` is public, so it is rate limited per IP hash with an in-memory `DashMap` (approximate across replicas, which is acceptable here), capped in size, and it re-prices every line through `PriceLinesRequest`. Spam protection beyond that is decided once real traffic shows the need.
 
-### Signing, step by step
+## Plain table: `lead`
 
-`AcceptQuote` runs: check signature rights → `EnsureCompanyRequest` when there is no company, then `AdoptDesignsRequest` → `ApproveProofsRequest` → write the signature and `accepted` in one transaction → `TypedStore::create` the `order`, named by the quote → store `order_id`.
-
-A crash between the last two steps leaves an `accepted` quote with no order. `sweep_quotes` finds these and finishes the job. The name makes that create idempotent.
+**`lead`** is a contact-form message: `email`, `name`, `company_name`, `message`, `created_at`, `erase_after`.
 
 ## Processing object: `order`
 
@@ -89,7 +104,7 @@ Suppliers have no API at this stage, so staff record what they hear. That input 
 
 ## Schedules
 
-`sweep_quotes` runs every 15m: alerts the consultant at `sla_alert_hours` and marks a breach at `sla_hours`, stamping `sla_alerted_at` so each alert goes once; expires quotes past `valid_until`; finishes signed quotes that have no order yet; erases `lead` rows past `erase_after`.
+`purge_leads` runs every 24h and erases `lead` rows past `erase_after`. Quote timers need no schedule, because each `quote` pass waits for its own next deadline.
 
 ## Config types
 
@@ -107,13 +122,14 @@ From `inbox`: `RecordSupplierUpdateRequest` writes a `production_event` and nudg
 
 ## Binding Directive sections
 
-§1, §2 (tables), §3 to §5 (`order`, `production_run`), §7 (generations on `EnsureInvoiceRequest`, `EnsureInboundRequest`, `EnsureShipmentRequest`; names as seams), §11 (quote amounts are not owed, so the ledger starts at the invoice).
+§1, §2 (tables), §3 to §5 (`quote`, `order`, `production_run`), §7 (generations on `EnsureInvoiceRequest`, `EnsureInboundRequest`, `EnsureShipmentRequest`; names as seams), §11 (quote amounts are not owed, so the ledger starts at the invoice).
 
 ## Tests
 
 - Golden path through every phase and each delivery mode, on the testkit.
 - Signature: same version twice gives one order. A stale version, an expired quote and a wrong email are all refused.
-- Crash between signature and `TypedStore::create`: `sweep_quotes` creates exactly one order.
+- Crash at every step after a signature: the `quote` pass creates exactly one order.
+- SLA alert fires once, and a quote past `valid_until` expires without a ticker.
 - A prepay order starts no production until the invoice settles, and an on-terms order does not wait.
 - A stale `order_generation` is dropped by `update_spec`, and an equal one passes.
 - A fenced-out attempt writes no status.
