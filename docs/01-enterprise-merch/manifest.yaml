@@ -1,0 +1,922 @@
+apiVersion: basable.com/v1
+kind: ProjectPlan
+project:
+  language: rust
+  frontend: static          # working assumption until round 1 answers "Design Studio"; see 00-scope.md
+  auth: kratos
+  basableLogin: false       # customers are other companies' employees; see 01-architecture.md
+  database: { instances: 1 }
+nanoservices:
+  - name: account
+    description: Owns companies, members, departments, addresses, recipients and the audit trail.
+    owns:
+      tables:
+        - name: company
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: source_name, type: string, unique: true, nullable: true }
+            - { name: display_name, type: string }
+            - { name: legal_name, type: string, nullable: true }
+            - { name: vat_number, type: string, nullable: true }
+            - { name: billing_address, type: json, nullable: true }
+            - { name: country, type: string }
+            - { name: currency, type: string }
+            - { name: payment_gate, type: string }
+            - { name: terms_days, type: int32, nullable: true }
+            - { name: created_at, type: timestamp }
+        - name: department
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: name, type: string }
+            - { name: cost_center, type: string, nullable: true }
+          indexes: [ { columns: [company_id] } ]
+        - name: membership
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: email, type: string }
+            - { name: identity_id, type: uuid, nullable: true }
+            - { name: role, type: string }
+            - { name: department_id, type: uuid, nullable: true }
+            - { name: invited_at, type: timestamp }
+            - { name: accepted_at, type: timestamp, nullable: true }
+            - { name: removed_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [company_id] }, { columns: [email] }, { columns: [identity_id] } ]
+        - name: staff_member
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: email, type: string, unique: true }
+            - { name: identity_id, type: uuid, nullable: true }
+            - { name: role, type: string }
+            - { name: active, type: bool }
+        - name: address
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: label, type: string }
+            - { name: contact_name, type: string }
+            - { name: street, type: string }
+            - { name: house_number, type: string }
+            - { name: postcode, type: string }
+            - { name: city, type: string }
+            - { name: region, type: string, nullable: true }
+            - { name: country, type: string }
+            - { name: phone, type: string, nullable: true }
+            - { name: archived_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [company_id] } ]
+        - name: recipient
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: email, type: string, nullable: true }
+            - { name: first_name, type: string, nullable: true }
+            - { name: last_name, type: string, nullable: true }
+            - { name: phone, type: string, nullable: true }
+            - { name: home_address, type: json, nullable: true }
+            - { name: labels, type: json }
+            - { name: source, type: string }
+            - { name: erase_after, type: timestamp, nullable: true }
+            - { name: erased_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [company_id] }, { columns: [erase_after] } ]
+        - name: audit_event
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid, nullable: true }
+            - { name: actor, type: string }
+            - { name: action, type: string }
+            - { name: subject, type: string }
+            - { name: detail, type: json }
+            - { name: occurred_at, type: timestamp }
+          indexes: [ { columns: [company_id] } ]
+    schedules:
+      - { name: purge_recipient_pii, every: 24h }
+    handles:
+      - { message: GetCompanyRequest, response: Company }
+      - { message: UpdateCompanyRequest, response: Company }
+      - { message: EnsureCompanyRequest, response: Company }
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: ListMembersRequest, response: MemberList }
+      - { message: InviteMemberRequest, response: Member }
+      - { message: UpdateMemberRequest, response: Member }
+      - { message: RemoveMemberRequest, response: Member }
+      - { message: ListDepartmentsRequest, response: DepartmentList }
+      - { message: UpsertDepartmentRequest, response: Department }
+      - { message: ListAddressesRequest, response: AddressList }
+      - { message: UpsertAddressRequest, response: Address }
+      - { message: ListRecipientsRequest, response: RecipientList }
+      - { message: UpsertRecipientRequest, response: Recipient }
+      - { message: ImportRecipientsRequest, response: RecipientImportResult }
+      - { message: EraseRecipientRequest, response: Recipient }
+      - { message: ResolveRecipientsRequest, response: RecipientList }
+      - { message: ListAuditEventsRequest, response: AuditEventList }
+      - { message: AuditEvent }
+    sends:
+      - { message: SendEmailRequest, response: EmailReceipt }
+    api:
+      service: AccountService
+      methods:
+        - { name: GetCompany, request: GetCompanyRequest, response: GetCompanyResponse }
+        - { name: UpdateCompany, request: UpdateCompanyRequest, response: UpdateCompanyResponse }
+        - { name: ListMembers, request: ListMembersRequest, response: ListMembersResponse }
+        - { name: InviteMember, request: InviteMemberRequest, response: InviteMemberResponse }
+        - { name: UpdateMember, request: UpdateMemberRequest, response: UpdateMemberResponse }
+        - { name: RemoveMember, request: RemoveMemberRequest, response: RemoveMemberResponse }
+        - { name: ListDepartments, request: ListDepartmentsRequest, response: ListDepartmentsResponse }
+        - { name: UpsertDepartment, request: UpsertDepartmentRequest, response: UpsertDepartmentResponse }
+        - { name: ListAddresses, request: ListAddressesRequest, response: ListAddressesResponse }
+        - { name: UpsertAddress, request: UpsertAddressRequest, response: UpsertAddressResponse }
+        - { name: ListRecipients, request: ListRecipientsRequest, response: ListRecipientsResponse }
+        - { name: UpsertRecipient, request: UpsertRecipientRequest, response: UpsertRecipientResponse }
+        - { name: ImportRecipients, request: ImportRecipientsRequest, response: ImportRecipientsResponse }
+        - { name: EraseRecipient, request: EraseRecipientRequest, response: EraseRecipientResponse }
+        - { name: ListAuditEvents, request: ListAuditEventsRequest, response: ListAuditEventsResponse }
+
+  - name: catalog
+    description: Owns products, variants, list prices and decoration options, and renders the public shop pages.
+    owns:
+      tables:
+        - name: product
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: slug, type: string, unique: true }
+            - { name: name, type: string }
+            - { name: description, type: string }
+            - { name: category_slug, type: string }
+            - { name: brand_slug, type: string, nullable: true }
+            - { name: collections, type: json }
+            - { name: attributes, type: json }
+            - { name: impact_note, type: string, nullable: true }
+            - { name: sustainability_labels, type: json }
+            - { name: min_qty, type: int32 }
+            - { name: production_days, type: int32 }
+            - { name: customisable, type: bool }
+            - { name: best_selling, type: bool }
+            - { name: is_new, type: bool }
+            - { name: weight_grams, type: int32 }
+            - { name: hs_code, type: string, nullable: true }
+            - { name: origin_country, type: string, nullable: true }
+            - { name: status, type: string }
+            - { name: search_text, type: string }
+          indexes: [ { columns: [category_slug] }, { columns: [status] } ]
+        - name: variant
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: product_id, type: uuid }
+            - { name: colour_slug, type: string }
+            - { name: sku, type: string, unique: true }
+            - { name: sizes, type: json }
+            - { name: status, type: string }
+          indexes: [ { columns: [product_id] } ]
+        - name: price_tier
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: product_id, type: uuid }
+            - { name: currency, type: string }
+            - { name: min_qty, type: int32 }
+            - { name: unit_minor, type: int64 }
+          indexes: [ { columns: [product_id, currency] } ]
+        - name: decoration_option
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: product_id, type: uuid }
+            - { name: print_method_slug, type: string }
+            - { name: areas, type: json }
+            - { name: currency, type: string }
+            - { name: setup_minor, type: int64 }
+            - { name: per_unit_minor, type: int64 }
+          indexes: [ { columns: [product_id] } ]
+        - name: product_image
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: product_id, type: uuid }
+            - { name: variant_id, type: uuid, nullable: true }
+            - { name: object_key, type: string }
+            - { name: alt_text, type: string }
+            - { name: position, type: int32 }
+          indexes: [ { columns: [product_id] } ]
+        - name: supplier_offer
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: product_id, type: uuid }
+            - { name: supplier_slug, type: string }
+            - { name: supplier_sku, type: string }
+            - { name: currency, type: string }
+            - { name: cost_minor, type: int64 }
+            - { name: lead_days, type: int32 }
+            - { name: preferred, type: bool }
+          indexes: [ { columns: [product_id] } ]
+      configTypes:
+        - name: category
+          prefix: cat
+          fields:
+            - { name: slug, type: string }
+            - { name: parent_slug, type: string }
+            - { name: title, type: string }
+            - { name: sort_order, type: int32 }
+        - name: collection
+          prefix: coll
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+            - { name: active, type: bool }
+        - name: brand
+          prefix: brnd
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+        - name: colour
+          prefix: clr
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+            - { name: hex, type: string }
+            - { name: family, type: string }
+        - name: print_method
+          prefix: pm
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+        - name: supplier
+          prefix: sup
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+            - { name: po_email, type: string }
+            - { name: country, type: string }
+        - name: pricing_policy
+          prefix: ppol
+          fields:
+            - { name: express_fee_bps, type: int32 }
+            - { name: express_days_faster, type: int32 }
+    handles:
+      - { message: ListProductsRequest, response: ProductPage }
+      - { message: GetProductRequest, response: Product }
+      - { message: ListCategoriesRequest, response: CategoryList }
+      - { message: PriceLinesRequest, response: PricedLines }
+      - { message: UpsertProductRequest, response: Product }
+      - { message: UpsertVariantRequest, response: Variant }
+      - { message: SetPriceTiersRequest, response: Product }
+      - { message: SetDecorationOptionsRequest, response: Product }
+      - { message: SetSupplierOffersRequest, response: SupplierOffers }
+      - { message: CreateImageUploadRequest, response: ImageUpload }
+      - { message: ArchiveProductRequest, response: Product }
+      - { message: GetSupplierOffersRequest, response: SupplierOffers }
+      - { message: GetCustomsDataRequest, response: CustomsData }
+      - { message: RenderShopPageRequest, response: ShopPage }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: AuditEvent }
+    api:
+      service: CatalogService
+      methods:
+        - { name: ListProducts, request: ListProductsRequest, response: ListProductsResponse }
+        - { name: GetProduct, request: GetProductRequest, response: GetProductResponse }
+        - { name: ListCategories, request: ListCategoriesRequest, response: ListCategoriesResponse }
+        - { name: PriceLines, request: PriceLinesRequest, response: PriceLinesResponse }
+        - { name: UpsertProduct, request: UpsertProductRequest, response: UpsertProductResponse }
+        - { name: UpsertVariant, request: UpsertVariantRequest, response: UpsertVariantResponse }
+        - { name: SetPriceTiers, request: SetPriceTiersRequest, response: SetPriceTiersResponse }
+        - { name: SetDecorationOptions, request: SetDecorationOptionsRequest, response: SetDecorationOptionsResponse }
+        - { name: SetSupplierOffers, request: SetSupplierOffersRequest, response: SetSupplierOffersResponse }
+        - { name: CreateImageUpload, request: CreateImageUploadRequest, response: CreateImageUploadResponse }
+        - { name: ArchiveProduct, request: ArchiveProductRequest, response: ArchiveProductResponse }
+
+  - name: design
+    description: Owns each company's brand assets and the proofs consultants prepare for quotes.
+    owns:
+      tables:
+        - name: brand_profile
+          columns:
+            - { name: company_id, type: uuid, primaryKey: true }
+            - { name: colours, type: json }
+            - { name: fonts, type: json }
+            - { name: guidelines, type: string, nullable: true }
+            - { name: updated_at, type: timestamp }
+        - name: brand_asset
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: kind, type: string }
+            - { name: filename, type: string }
+            - { name: object_key, type: string }
+            - { name: mime_type, type: string }
+            - { name: size_bytes, type: int64 }
+            - { name: created_at, type: timestamp }
+            - { name: confirmed_at, type: timestamp, nullable: true }
+            - { name: deleted_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [company_id] }, { columns: [confirmed_at] } ]
+        - name: proof
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: subject_name, type: string }
+            - { name: line_ref, type: string }
+            - { name: version, type: int32 }
+            - { name: preview_key, type: string }
+            - { name: artwork_key, type: string }
+            - { name: print_spec, type: json }
+            - { name: created_by, type: string }
+            - { name: created_at, type: timestamp }
+            - { name: approved_at, type: timestamp, nullable: true }
+            - { name: approved_by, type: string, nullable: true }
+          indexes: [ { columns: [subject_name] } ]
+    externalSystems:
+      - name: object_storage
+        calls:
+          - { name: delete_object, strategy: idempotent }
+    schedules:
+      - { name: purge_orphan_uploads, every: 24h }
+    handles:
+      - { message: GetBrandProfileRequest, response: BrandProfile }
+      - { message: UpdateBrandProfileRequest, response: BrandProfile }
+      - { message: ListBrandAssetsRequest, response: BrandAssetList }
+      - { message: CreateAssetUploadRequest, response: AssetUpload }
+      - { message: ConfirmAssetUploadRequest, response: BrandAsset }
+      - { message: DeleteBrandAssetRequest, response: BrandAsset }
+      - { message: CreateProofRequest, response: Proof }
+      - { message: ListProofsRequest, response: ProofList }
+      - { message: ApproveProofsRequest, response: ProofApproval }
+      - { message: GetApprovedArtworkRequest, response: ArtworkBundle }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: AuditEvent }
+    api:
+      service: DesignService
+      methods:
+        - { name: GetBrandProfile, request: GetBrandProfileRequest, response: GetBrandProfileResponse }
+        - { name: UpdateBrandProfile, request: UpdateBrandProfileRequest, response: UpdateBrandProfileResponse }
+        - { name: ListBrandAssets, request: ListBrandAssetsRequest, response: ListBrandAssetsResponse }
+        - { name: CreateAssetUpload, request: CreateAssetUploadRequest, response: CreateAssetUploadResponse }
+        - { name: ConfirmAssetUpload, request: ConfirmAssetUploadRequest, response: ConfirmAssetUploadResponse }
+        - { name: DeleteBrandAsset, request: DeleteBrandAssetRequest, response: DeleteBrandAssetResponse }
+        - { name: CreateProof, request: CreateProofRequest, response: CreateProofResponse }
+        - { name: ListProofs, request: ListProofsRequest, response: ListProofsResponse }
+
+  - name: order
+    description: Takes a request from quote to signature, then drives each order through invoicing, production and delivery.
+    owns:
+      processingObjects:
+        - name: order
+          prefix: ord
+          spec:
+            - { name: quote_id, type: uuid, immutable: true }
+            - { name: quote_version, type: int32, immutable: true }
+            - { name: company_id, type: uuid, immutable: true }
+            - { name: lines, type: json, immutable: true }
+            - { name: currency, type: string, immutable: true }
+            - { name: delivery, type: json, immutable: true }
+            - { name: timeline, type: string, immutable: true }
+            - { name: payment_gate, type: string, immutable: true }
+            - { name: cancel_requested, type: bool }
+          status:
+            - { name: phase, type: string }
+            - { name: invoice_id, type: string, nullable: true }
+            - { name: paid_at, type: timestamp, nullable: true }
+            - { name: production_started_at, type: timestamp, nullable: true }
+            - { name: received_at, type: timestamp, nullable: true }
+            - { name: completed_at, type: timestamp, nullable: true }
+            - { name: attention, type: string, nullable: true }
+        - name: production_run
+          prefix: prun
+          spec:
+            - { name: order_id, type: uuid, immutable: true }
+            - { name: order_generation, type: int64 }
+            - { name: supplier_slug, type: string, immutable: true }
+            - { name: lines, type: json, immutable: true }
+            - { name: destination, type: json, immutable: true }
+            - { name: due_on, type: timestamp }
+            - { name: cancel_requested, type: bool }
+          status:
+            - { name: phase, type: string }
+            - { name: po_intent_at, type: timestamp, nullable: true }
+            - { name: po_sent_at, type: timestamp, nullable: true }
+            - { name: acknowledged_at, type: timestamp, nullable: true }
+            - { name: supplier_ref, type: string, nullable: true }
+            - { name: expected_at, type: timestamp, nullable: true }
+            - { name: inbound_id, type: string, nullable: true }
+            - { name: received_at, type: timestamp, nullable: true }
+            - { name: carrier, type: string, nullable: true }
+            - { name: tracking_number, type: string, nullable: true }
+      tables:
+        - name: quote
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: number, type: string, unique: true }
+            - { name: company_id, type: uuid, nullable: true }
+            - { name: contact, type: json }
+            - { name: contact_email, type: string }
+            - { name: delivery, type: json }
+            - { name: timeline, type: string }
+            - { name: deadline_note, type: string, nullable: true }
+            - { name: status, type: string }
+            - { name: consultant_id, type: uuid, nullable: true }
+            - { name: current_version, type: int32 }
+            - { name: requested_at, type: timestamp }
+            - { name: sla_due_at, type: timestamp }
+            - { name: sla_alerted_at, type: timestamp, nullable: true }
+            - { name: valid_until, type: timestamp, nullable: true }
+            - { name: source_order_id, type: uuid, nullable: true }
+            - { name: order_id, type: uuid, nullable: true }
+          indexes: [ { columns: [company_id] }, { columns: [contact_email] }, { columns: [status, sla_due_at] } ]
+        - name: quote_version
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: quote_id, type: uuid }
+            - { name: version, type: int32 }
+            - { name: lines, type: json }
+            - { name: shipping_minor, type: int64 }
+            - { name: handling_minor, type: int64 }
+            - { name: currency, type: string }
+            - { name: note, type: string, nullable: true }
+            - { name: published_at, type: timestamp, nullable: true }
+            - { name: published_by, type: string, nullable: true }
+          indexes: [ { columns: [quote_id] } ]
+        - name: quote_signature
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: quote_id, type: uuid }
+            - { name: version, type: int32 }
+            - { name: signer_identity_id, type: uuid }
+            - { name: signer_name, type: string }
+            - { name: signer_email, type: string }
+            - { name: po_number, type: string, nullable: true }
+            - { name: signed_at, type: timestamp }
+          indexes: [ { columns: [quote_id] } ]
+        - name: quote_comment
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: quote_id, type: uuid }
+            - { name: author, type: string }
+            - { name: body, type: string }
+            - { name: created_at, type: timestamp }
+          indexes: [ { columns: [quote_id] } ]
+        - name: production_event
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: run_id, type: uuid }
+            - { name: kind, type: string }
+            - { name: detail, type: json }
+            - { name: actor, type: string }
+            - { name: occurred_at, type: timestamp }
+          indexes: [ { columns: [run_id] } ]
+        - name: lead
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: email, type: string }
+            - { name: name, type: string }
+            - { name: company_name, type: string, nullable: true }
+            - { name: message, type: string }
+            - { name: created_at, type: timestamp }
+            - { name: erase_after, type: timestamp }
+          indexes: [ { columns: [erase_after] } ]
+      configTypes:
+        - name: quote_policy
+          prefix: qpol
+          fields:
+            - { name: sla_hours, type: int32 }
+            - { name: sla_alert_hours, type: int32 }
+            - { name: validity_days, type: int32 }
+    schedules:
+      - { name: sweep_quotes, every: 15m }
+    handles:
+      - { message: RequestQuoteRequest, response: Quote }
+      - { message: ListQuotesRequest, response: QuoteList }
+      - { message: GetQuoteRequest, response: Quote }
+      - { message: AssignQuoteRequest, response: Quote }
+      - { message: PublishQuoteVersionRequest, response: Quote }
+      - { message: RequestQuoteChangesRequest, response: Quote }
+      - { message: AcceptQuoteRequest, response: Order }
+      - { message: ReorderRequest, response: Quote }
+      - { message: ListOrdersRequest, response: OrderList }
+      - { message: GetOrderRequest, response: Order }
+      - { message: CancelOrderRequest, response: Order }
+      - { message: ListProductionRunsRequest, response: ProductionRunList }
+      - { message: RecordProductionEventRequest, response: ProductionRun }
+      - { message: SubmitLeadRequest, response: LeadAck }
+      - { message: InvoiceChanged }
+      - { message: InboundChanged }
+      - { message: ShipmentChanged }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: GetCompanyRequest, response: Company }
+      - { message: EnsureCompanyRequest, response: Company }
+      - { message: PriceLinesRequest, response: PricedLines }
+      - { message: GetSupplierOffersRequest, response: SupplierOffers }
+      - { message: ListProofsRequest, response: ProofList }
+      - { message: ApproveProofsRequest, response: ProofApproval }
+      - { message: GetApprovedArtworkRequest, response: ArtworkBundle }
+      - { message: EnsureInvoiceRequest, response: Invoice }
+      - { message: GetInvoiceRequest, response: Invoice }
+      - { message: EnsureInboundRequest, response: Inbound }
+      - { message: GetInboundRequest, response: Inbound }
+      - { message: EnsureShipmentRequest, response: Shipment }
+      - { message: GetShipmentRequest, response: Shipment }
+      - { message: SendEmailRequest, response: EmailReceipt }
+      - { message: AuditEvent }
+    api:
+      service: OrderService
+      methods:
+        - { name: RequestQuote, request: RequestQuoteRequest, response: RequestQuoteResponse }
+        - { name: ListQuotes, request: ListQuotesRequest, response: ListQuotesResponse }
+        - { name: GetQuote, request: GetQuoteRequest, response: GetQuoteResponse }
+        - { name: AssignQuote, request: AssignQuoteRequest, response: AssignQuoteResponse }
+        - { name: PublishQuoteVersion, request: PublishQuoteVersionRequest, response: PublishQuoteVersionResponse }
+        - { name: RequestQuoteChanges, request: RequestQuoteChangesRequest, response: RequestQuoteChangesResponse }
+        - { name: AcceptQuote, request: AcceptQuoteRequest, response: AcceptQuoteResponse }
+        - { name: Reorder, request: ReorderRequest, response: ReorderResponse }
+        - { name: ListOrders, request: ListOrdersRequest, response: ListOrdersResponse }
+        - { name: GetOrder, request: GetOrderRequest, response: GetOrderResponse }
+        - { name: CancelOrder, request: CancelOrderRequest, response: CancelOrderResponse }
+        - { name: ListProductionRuns, request: ListProductionRunsRequest, response: ListProductionRunsResponse }
+        - { name: RecordProductionEvent, request: RecordProductionEventRequest, response: RecordProductionEventResponse }
+        - { name: SubmitLead, request: SubmitLeadRequest, response: SubmitLeadResponse }
+
+  - name: fulfilment
+    description: Owns held stock, kits and inbound goods, and drives each shipment from reservation to delivery.
+    owns:
+      processingObjects:
+        - name: shipment
+          prefix: shp
+          spec:
+            - { name: name, type: string, immutable: true }
+            - { name: source_generation, type: int64 }
+            - { name: company_id, type: uuid, immutable: true }
+            - { name: batch_id, type: uuid, nullable: true, immutable: true }
+            - { name: warehouse_slug, type: string, immutable: true }
+            - { name: lines, type: json, immutable: true }
+            - { name: service_level, type: string, immutable: true }
+            - { name: incoterm, type: string, immutable: true }
+            - { name: cancel_requested, type: bool }
+          status:
+            - { name: phase, type: string }
+            - { name: reserved_at, type: timestamp, nullable: true }
+            - { name: picked_at, type: timestamp, nullable: true }
+            - { name: label_slot, type: string, nullable: true }
+            - { name: label_id, type: string, nullable: true }
+            - { name: label_key, type: string, nullable: true }
+            - { name: carrier, type: string, nullable: true }
+            - { name: tracking_number, type: string, nullable: true }
+            - { name: dispatched_at, type: timestamp, nullable: true }
+            - { name: delivered_at, type: timestamp, nullable: true }
+            - { name: exception, type: string, nullable: true }
+      tables:
+        - name: stock_item
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: name, type: string }
+            - { name: product_id, type: uuid, nullable: true }
+            - { name: variant_id, type: uuid, nullable: true }
+            - { name: size, type: string, nullable: true }
+            - { name: proof_id, type: uuid, nullable: true }
+            - { name: is_kit, type: bool }
+          indexes: [ { columns: [company_id] } ]
+        - name: stock_level
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: stock_item_id, type: uuid }
+            - { name: warehouse_slug, type: string }
+            - { name: on_hand, type: int32 }
+            - { name: reserved, type: int32 }
+          indexes: [ { columns: [stock_item_id, warehouse_slug] } ]
+        - name: stock_movement
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: stock_item_id, type: uuid }
+            - { name: warehouse_slug, type: string }
+            - { name: kind, type: string }
+            - { name: on_hand_delta, type: int32 }
+            - { name: reserved_delta, type: int32 }
+            - { name: source, type: string }
+            - { name: actor, type: string }
+            - { name: occurred_at, type: timestamp }
+          indexes: [ { columns: [stock_item_id] }, { columns: [source] } ]
+        - name: kit_component
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: kit_item_id, type: uuid }
+            - { name: component_item_id, type: uuid }
+            - { name: quantity, type: int32 }
+          indexes: [ { columns: [kit_item_id] } ]
+        - name: assembly_order
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: kit_item_id, type: uuid }
+            - { name: warehouse_slug, type: string }
+            - { name: quantity, type: int32 }
+            - { name: status, type: string }
+            - { name: completed_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [company_id] } ]
+        - name: inbound
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: name, type: string, unique: true }
+            - { name: source_generation, type: int64 }
+            - { name: company_id, type: uuid }
+            - { name: warehouse_slug, type: string }
+            - { name: lines, type: json }
+            - { name: status, type: string }
+            - { name: received_lines, type: json }
+            - { name: received_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [status] } ]
+        - name: low_stock_rule
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: stock_item_id, type: uuid, unique: true }
+            - { name: threshold, type: int32 }
+            - { name: notify_email, type: string }
+        - name: shipment_batch
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid }
+            - { name: created_by, type: string }
+            - { name: charges, type: json }
+            - { name: created_at, type: timestamp }
+          indexes: [ { columns: [company_id] } ]
+        - name: shipment_address
+          columns:
+            - { name: shipment_id, type: uuid, primaryKey: true }
+            - { name: address, type: json, nullable: true }
+            - { name: erase_after, type: timestamp, nullable: true }
+            - { name: erased_at, type: timestamp, nullable: true }
+          indexes: [ { columns: [erase_after] } ]
+        - name: shipment_event
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: shipment_id, type: uuid }
+            - { name: kind, type: string }
+            - { name: detail, type: json }
+            - { name: dedupe_key, type: string, unique: true }
+            - { name: occurred_at, type: timestamp }
+          indexes: [ { columns: [shipment_id] } ]
+      configTypes:
+        - name: warehouse
+          prefix: wh
+          fields:
+            - { name: slug, type: string }
+            - { name: title, type: string }
+            - { name: country, type: string }
+            - { name: operator, type: string }
+        - name: shipping_zone
+          prefix: szn
+          fields:
+            - { name: slug, type: string }
+            - { name: countries, type: json }
+            - { name: standard_transit_days, type: int32 }
+            - { name: express_transit_days, type: int32 }
+            - { name: currency, type: string }
+            - { name: standard_pack_minor, type: int64 }
+            - { name: express_pack_minor, type: int64 }
+            - { name: incoterm, type: string }
+        - name: fulfilment_fee
+          prefix: ffee
+          fields:
+            - { name: currency, type: string }
+            - { name: pack_handling_minor, type: int64 }
+            - { name: warehouse_inbound_minor, type: int64 }
+    externalSystems:
+      - name: carrier
+        calls:
+          - { name: create_label, strategy: declared, irreversible: true }
+          - { name: void_label, strategy: idempotent }
+    webhooks:
+      - { provider: carrier }
+    schedules:
+      - { name: check_low_stock, every: 1h }
+      - { name: purge_shipment_addresses, every: 24h }
+    handles:
+      - { message: EstimateDeliveryRequest, response: DeliveryEstimate }
+      - { message: ListStockRequest, response: StockList }
+      - { message: SetLowStockRuleRequest, response: LowStockRule }
+      - { message: AdjustStockRequest, response: StockLevel }
+      - { message: ListKitsRequest, response: KitList }
+      - { message: UpsertKitRequest, response: Kit }
+      - { message: CreateAssemblyOrderRequest, response: AssemblyOrder }
+      - { message: RecordAssemblyRequest, response: AssemblyOrder }
+      - { message: ListInboundRequest, response: InboundList }
+      - { message: RecordInboundReceiptRequest, response: Inbound }
+      - { message: CreateShipmentsRequest, response: ShipmentBatch }
+      - { message: ListShipmentsRequest, response: ShipmentList }
+      - { message: GetShipmentRequest, response: Shipment }
+      - { message: RecordPickRequest, response: Shipment }
+      - { message: CancelShipmentRequest, response: Shipment }
+      - { message: EnsureInboundRequest, response: Inbound }
+      - { message: GetInboundRequest, response: Inbound }
+      - { message: EnsureShipmentRequest, response: Shipment }
+      - { message: CarrierWebhookEvent, response: WebhookAck }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: ResolveRecipientsRequest, response: RecipientList }
+      - { message: GetCustomsDataRequest, response: CustomsData }
+      - { message: EnsureInvoiceRequest, response: Invoice }
+      - { message: SendEmailRequest, response: EmailReceipt }
+      - { message: InboundChanged }
+      - { message: ShipmentChanged }
+      - { message: AuditEvent }
+    api:
+      service: FulfilmentService
+      methods:
+        - { name: EstimateDelivery, request: EstimateDeliveryRequest, response: EstimateDeliveryResponse }
+        - { name: ListStock, request: ListStockRequest, response: ListStockResponse }
+        - { name: SetLowStockRule, request: SetLowStockRuleRequest, response: SetLowStockRuleResponse }
+        - { name: AdjustStock, request: AdjustStockRequest, response: AdjustStockResponse }
+        - { name: ListKits, request: ListKitsRequest, response: ListKitsResponse }
+        - { name: UpsertKit, request: UpsertKitRequest, response: UpsertKitResponse }
+        - { name: CreateAssemblyOrder, request: CreateAssemblyOrderRequest, response: CreateAssemblyOrderResponse }
+        - { name: RecordAssembly, request: RecordAssemblyRequest, response: RecordAssemblyResponse }
+        - { name: ListInbound, request: ListInboundRequest, response: ListInboundResponse }
+        - { name: RecordInboundReceipt, request: RecordInboundReceiptRequest, response: RecordInboundReceiptResponse }
+        - { name: CreateShipments, request: CreateShipmentsRequest, response: CreateShipmentsResponse }
+        - { name: ListShipments, request: ListShipmentsRequest, response: ListShipmentsResponse }
+        - { name: GetShipment, request: GetShipmentRequest, response: GetShipmentResponse }
+        - { name: RecordPick, request: RecordPickRequest, response: RecordPickResponse }
+        - { name: CancelShipment, request: CancelShipmentRequest, response: CancelShipmentResponse }
+
+  - name: billing
+    description: Owns the ledger, invoices and credit notes, payments and VAT returns.
+    owns:
+      ledger:
+        objects:
+          - name: invoice
+            producer: billing
+            states: [issued]
+            initial: [issued]
+            changes:
+              issued: []
+          - name: credit_note
+            producer: billing
+            states: [issued]
+            initial: [issued]
+            changes:
+              issued: []
+          - name: payment
+            producer: billing
+            states: [pending, settled, reversed]
+            initial: [pending, settled]
+            changes:
+              pending: [settled, reversed]
+              settled: [reversed]
+          - name: vat_return
+            producer: billing
+            states: [filed]
+            initial: [filed]
+            changes:
+              filed: []
+      processingObjects:
+        - name: invoice
+          prefix: inv
+          spec:
+            - { name: name, type: string, immutable: true }
+            - { name: kind, type: string, immutable: true }
+            - { name: company_id, type: uuid, immutable: true }
+            - { name: company_snapshot, type: json, immutable: true }
+            - { name: lines, type: json, immutable: true }
+            - { name: currency, type: string, immutable: true }
+            - { name: net_minor, type: int64, immutable: true }
+            - { name: vat_minor, type: int64, immutable: true }
+            - { name: gross_minor, type: int64, immutable: true }
+            - { name: tax_point, type: timestamp, immutable: true }
+            - { name: terms_days, type: int32, immutable: true }
+            - { name: corrects_invoice_id, type: uuid, nullable: true, immutable: true }
+          status:
+            - { name: phase, type: string }
+            - { name: number, type: string, nullable: true }
+            - { name: pdf_key, type: string, nullable: true }
+            - { name: ledger_version, type: int64 }
+            - { name: issued_at, type: timestamp, nullable: true }
+            - { name: due_at, type: timestamp, nullable: true }
+            - { name: send_intent_at, type: timestamp, nullable: true }
+            - { name: sent_at, type: timestamp, nullable: true }
+            - { name: reminders_sent, type: int32 }
+            - { name: reminder_intent_at, type: timestamp, nullable: true }
+            - { name: settled_at, type: timestamp, nullable: true }
+        - name: payment
+          prefix: pay
+          spec:
+            - { name: reference, type: string, immutable: true }
+            - { name: invoice_id, type: uuid, immutable: true }
+            - { name: company_id, type: uuid, immutable: true }
+            - { name: method, type: string, immutable: true }
+            - { name: direction, type: string, immutable: true }
+            - { name: amount_minor, type: int64, immutable: true }
+            - { name: currency, type: string, immutable: true }
+            - { name: value_date, type: timestamp, nullable: true }
+            - { name: cancel_requested, type: bool }
+          status:
+            - { name: phase, type: string }
+            - { name: intent_at, type: timestamp, nullable: true }
+            - { name: provider_id, type: string, nullable: true }
+            - { name: checkout_url, type: string, nullable: true }
+            - { name: ledger_version, type: int64 }
+            - { name: settled_at, type: timestamp, nullable: true }
+            - { name: reversed_at, type: timestamp, nullable: true }
+            - { name: failure, type: string, nullable: true }
+        - name: vat_return
+          prefix: vret
+          spec:
+            - { name: country, type: string, immutable: true }
+            - { name: period, type: string, immutable: true }
+            - { name: filed, type: bool }
+            - { name: filing_reference, type: string, nullable: true }
+          status:
+            - { name: phase, type: string }
+            - { name: vat_due_minor, type: int64, nullable: true }
+            - { name: ledger_version, type: int64 }
+            - { name: filed_at, type: timestamp, nullable: true }
+      tables:
+        - name: invoice_counter
+          columns:
+            - { name: series, type: string, primaryKey: true }
+            - { name: next_number, type: int64 }
+        - name: invoice_number
+          columns:
+            - { name: invoice_id, type: uuid, primaryKey: true }
+            - { name: series, type: string }
+            - { name: number, type: string, unique: true }
+            - { name: assigned_at, type: timestamp }
+        - name: payment_webhook_event
+          columns:
+            - { name: event_id, type: string, primaryKey: true }
+            - { name: provider_id, type: string }
+            - { name: kind, type: string }
+            - { name: payload, type: json }
+            - { name: received_at, type: timestamp }
+          indexes: [ { columns: [provider_id] } ]
+      configTypes:
+        - name: vat_rule
+          prefix: vatr
+          fields:
+            - { name: country, type: string }
+            - { name: standard_rate_bps, type: int32 }
+            - { name: valid_from, type: timestamp }
+        - name: billing_policy
+          prefix: bpol
+          fields:
+            - { name: default_terms_days, type: int32 }
+            - { name: card_fee_bps, type: int32 }
+            - { name: reminder_days, type: json }
+    externalSystems:
+      - name: payments
+        calls:
+          - { name: create_checkout_session, strategy: keyed_replay, irreversible: true, replayWindow: 24h }
+          - { name: expire_checkout_session, strategy: idempotent }
+          - { name: create_refund, strategy: keyed_replay, irreversible: true, replayWindow: 24h }
+      - name: object_storage
+        calls:
+          - { name: store_document, strategy: idempotent }
+    webhooks:
+      - { provider: payments }
+    handles:
+      - { message: EnsureInvoiceRequest, response: Invoice }
+      - { message: ListInvoicesRequest, response: InvoiceList }
+      - { message: GetInvoiceRequest, response: Invoice }
+      - { message: GetInvoiceDownloadRequest, response: DownloadLink }
+      - { message: PayInvoiceByCardRequest, response: CheckoutLink }
+      - { message: RecordBankPaymentRequest, response: Payment }
+      - { message: IssueCreditNoteRequest, response: Invoice }
+      - { message: RecordRefundRequest, response: Payment }
+      - { message: GetSpendReportRequest, response: SpendReport }
+      - { message: DraftVatReturnRequest, response: VatReturn }
+      - { message: MarkVatReturnFiledRequest, response: VatReturn }
+      - { message: GetTrialBalanceRequest, response: TrialBalance }
+      - { message: PaymentWebhookEvent, response: WebhookAck }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: GetCompanyRequest, response: Company }
+      - { message: SendEmailRequest, response: EmailReceipt }
+      - { message: InvoiceChanged }
+      - { message: AuditEvent }
+    api:
+      service: BillingService
+      methods:
+        - { name: ListInvoices, request: ListInvoicesRequest, response: ListInvoicesResponse }
+        - { name: GetInvoice, request: GetInvoiceRequest, response: GetInvoiceResponse }
+        - { name: GetInvoiceDownload, request: GetInvoiceDownloadRequest, response: GetInvoiceDownloadResponse }
+        - { name: PayInvoiceByCard, request: PayInvoiceByCardRequest, response: PayInvoiceByCardResponse }
+        - { name: RecordBankPayment, request: RecordBankPaymentRequest, response: RecordBankPaymentResponse }
+        - { name: IssueCreditNote, request: IssueCreditNoteRequest, response: IssueCreditNoteResponse }
+        - { name: RecordRefund, request: RecordRefundRequest, response: RecordRefundResponse }
+        - { name: GetSpendReport, request: GetSpendReportRequest, response: GetSpendReportResponse }
+        - { name: DraftVatReturn, request: DraftVatReturnRequest, response: DraftVatReturnResponse }
+        - { name: MarkVatReturnFiled, request: MarkVatReturnFiledRequest, response: MarkVatReturnFiledResponse }
+        - { name: GetTrialBalance, request: GetTrialBalanceRequest, response: GetTrialBalanceResponse }
+
+  - name: notifier
+    description: Sends one templated email per request, keyed by the caller.
+    owns:
+      configTypes:
+        - name: email_template
+          prefix: etpl
+          fields:
+            - { name: slug, type: string }
+            - { name: locale, type: string }
+            - { name: subject, type: string }
+            - { name: body_html, type: string }
+            - { name: body_text, type: string }
+    externalSystems:
+      - name: email
+        calls:
+          - { name: send_email, strategy: keyed_replay, irreversible: true, replayWindow: 24h }
+    handles:
+      - { message: SendEmailRequest, response: EmailReceipt }
