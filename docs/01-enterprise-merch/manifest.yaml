@@ -2,9 +2,9 @@ apiVersion: basable.com/v1
 kind: ProjectPlan
 project:
   language: rust
-  frontend: static          # Design Studio deferred in round 1; see 01-architecture.md
+  frontend: react           # the Design Studio is an editor; see 01-architecture.md
   auth: kratos
-  basableLogin: false       # customers are other companies' employees; see 01-architecture.md
+  basableLogin: true        # lets a preview sign in without SMTP; off before customers arrive, see 05-deployment.md
   database: { instances: 1 }
 nanoservices:
   - name: account
@@ -194,6 +194,7 @@ nanoservices:
             - { name: object_key, type: string }
             - { name: alt_text, type: string }
             - { name: position, type: int32 }
+            - { name: view, type: string, nullable: true }
           indexes: [ { columns: [product_id] } ]
         - name: supplier_offer
           columns:
@@ -237,6 +238,7 @@ nanoservices:
           fields:
             - { name: slug, type: string }
             - { name: title, type: string }
+            - { name: constraints, type: json }
         - name: supplier
           prefix: sup
           fields:
@@ -244,6 +246,8 @@ nanoservices:
             - { name: title, type: string }
             - { name: po_email, type: string }
             - { name: country, type: string }
+            - { name: sender_domains, type: json }
+            - { name: bank_accounts, type: json }
         - name: pricing_policy
           prefix: ppol
           fields:
@@ -263,6 +267,7 @@ nanoservices:
       - { message: ArchiveProductRequest, response: Product }
       - { message: GetSupplierOffersRequest, response: SupplierOffers }
       - { message: GetCustomsDataRequest, response: CustomsData }
+      - { message: MatchSupplierRequest, response: SupplierMatch }
       - { message: RenderShopPageRequest, response: ShopPage }
     sends:
       - { message: ResolveMemberRequest, response: Member }
@@ -296,7 +301,8 @@ nanoservices:
         - name: brand_asset
           columns:
             - { name: id, type: uuid, primaryKey: true }
-            - { name: company_id, type: uuid }
+            - { name: company_id, type: uuid, nullable: true }
+            - { name: owner_identity_id, type: uuid, nullable: true }
             - { name: kind, type: string }
             - { name: filename, type: string }
             - { name: object_key, type: string }
@@ -305,7 +311,7 @@ nanoservices:
             - { name: created_at, type: timestamp }
             - { name: confirmed_at, type: timestamp, nullable: true }
             - { name: deleted_at, type: timestamp, nullable: true }
-          indexes: [ { columns: [company_id] }, { columns: [confirmed_at] } ]
+          indexes: [ { columns: [company_id] }, { columns: [owner_identity_id] }, { columns: [confirmed_at] } ]
         - name: proof
           columns:
             - { name: id, type: uuid, primaryKey: true }
@@ -319,7 +325,54 @@ nanoservices:
             - { name: created_at, type: timestamp }
             - { name: approved_at, type: timestamp, nullable: true }
             - { name: approved_by, type: string, nullable: true }
+            - { name: source_design_version_id, type: uuid, nullable: true }
           indexes: [ { columns: [subject_name] } ]
+        - name: design_document
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: company_id, type: uuid, nullable: true }
+            - { name: owner_identity_id, type: uuid }
+            - { name: product_id, type: uuid }
+            - { name: variant_id, type: uuid, nullable: true }
+            - { name: name, type: string }
+            - { name: draft, type: json }
+            - { name: schema_version, type: int32 }
+            - { name: revision, type: int32 }
+            - { name: status, type: string }
+            - { name: created_at, type: timestamp }
+            - { name: updated_at, type: timestamp }
+          indexes: [ { columns: [company_id] }, { columns: [owner_identity_id] } ]
+        - name: design_version
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: design_id, type: uuid }
+            - { name: version, type: int32 }
+            - { name: document, type: json }
+            - { name: schema_version, type: int32 }
+            - { name: preview_keys, type: json }
+            - { name: created_by, type: string }
+            - { name: created_at, type: timestamp }
+          indexes: [ { columns: [design_id] } ]
+        - name: design_template
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: slug, type: string, unique: true }
+            - { name: title, type: string }
+            - { name: kind, type: string }
+            - { name: product_id, type: uuid, nullable: true }
+            - { name: document, type: json }
+            - { name: schema_version, type: int32 }
+            - { name: preview_key, type: string }
+            - { name: status, type: string }
+            - { name: sort_order, type: int32 }
+          indexes: [ { columns: [kind] } ]
+      configTypes:
+        - name: studio_font
+          prefix: sfnt
+          fields:
+            - { name: family, type: string }
+            - { name: files, type: json }
+            - { name: licence, type: string }
     externalSystems:
       - name: object_storage
         calls:
@@ -337,6 +390,18 @@ nanoservices:
       - { message: ListProofsRequest, response: ProofList }
       - { message: ApproveProofsRequest, response: ProofApproval }
       - { message: GetApprovedArtworkRequest, response: ArtworkBundle }
+      - { message: CreateDesignRequest, response: DesignDocument }
+      - { message: GetDesignRequest, response: DesignDocument }
+      - { message: ListDesignsRequest, response: DesignList }
+      - { message: SaveDesignDraftRequest, response: DesignDocument }
+      - { message: SaveDesignVersionRequest, response: DesignVersion }
+      - { message: ArchiveDesignRequest, response: DesignDocument }
+      - { message: CreatePreviewUploadRequest, response: PreviewUpload }
+      - { message: ListDesignTemplatesRequest, response: DesignTemplateList }
+      - { message: GetDesignTemplateRequest, response: DesignTemplate }
+      - { message: UpsertDesignTemplateRequest, response: DesignTemplate }
+      - { message: ResolveDesignVersionRequest, response: DesignVersionRef }
+      - { message: AdoptDesignsRequest, response: DesignAdoption }
     sends:
       - { message: ResolveMemberRequest, response: Member }
       - { message: AuditEvent }
@@ -351,6 +416,16 @@ nanoservices:
         - { name: DeleteBrandAsset, request: DeleteBrandAssetRequest, response: DeleteBrandAssetResponse }
         - { name: CreateProof, request: CreateProofRequest, response: CreateProofResponse }
         - { name: ListProofs, request: ListProofsRequest, response: ListProofsResponse }
+        - { name: CreateDesign, request: CreateDesignRequest, response: CreateDesignResponse }
+        - { name: GetDesign, request: GetDesignRequest, response: GetDesignResponse }
+        - { name: ListDesigns, request: ListDesignsRequest, response: ListDesignsResponse }
+        - { name: SaveDesignDraft, request: SaveDesignDraftRequest, response: SaveDesignDraftResponse }
+        - { name: SaveDesignVersion, request: SaveDesignVersionRequest, response: SaveDesignVersionResponse }
+        - { name: ArchiveDesign, request: ArchiveDesignRequest, response: ArchiveDesignResponse }
+        - { name: CreatePreviewUpload, request: CreatePreviewUploadRequest, response: CreatePreviewUploadResponse }
+        - { name: ListDesignTemplates, request: ListDesignTemplatesRequest, response: ListDesignTemplatesResponse }
+        - { name: GetDesignTemplate, request: GetDesignTemplateRequest, response: GetDesignTemplateResponse }
+        - { name: UpsertDesignTemplate, request: UpsertDesignTemplateRequest, response: UpsertDesignTemplateResponse }
 
   - name: order
     description: Takes a request from quote to signature, then drives each order through invoicing, production and delivery.
@@ -493,6 +568,9 @@ nanoservices:
       - { message: ListProductionRunsRequest, response: ProductionRunList }
       - { message: RecordProductionEventRequest, response: ProductionRun }
       - { message: SubmitLeadRequest, response: LeadAck }
+      - { message: RecordSupplierUpdateRequest, response: ProductionRun }
+      - { message: IngestCustomerEmailRequest, response: Quote }
+      - { message: GetPurchaseMatchRequest, response: PurchaseMatch }
       - { message: InvoiceChanged }
       - { message: InboundChanged }
       - { message: ShipmentChanged }
@@ -505,6 +583,8 @@ nanoservices:
       - { message: ListProofsRequest, response: ProofList }
       - { message: ApproveProofsRequest, response: ProofApproval }
       - { message: GetApprovedArtworkRequest, response: ArtworkBundle }
+      - { message: ResolveDesignVersionRequest, response: DesignVersionRef }
+      - { message: AdoptDesignsRequest, response: DesignAdoption }
       - { message: EnsureInvoiceRequest, response: Invoice }
       - { message: GetInvoiceRequest, response: Invoice }
       - { message: EnsureInboundRequest, response: Inbound }
@@ -763,6 +843,12 @@ nanoservices:
             initial: [filed]
             changes:
               filed: []
+          - name: supplier_bill
+            producer: billing
+            states: [approved, voided]
+            initial: [approved]
+            changes:
+              approved: [voided]
       processingObjects:
         - name: invoice
           prefix: inv
@@ -795,7 +881,8 @@ nanoservices:
           prefix: pay
           spec:
             - { name: reference, type: string, immutable: true }
-            - { name: invoice_id, type: uuid, immutable: true }
+            - { name: invoice_id, type: uuid, nullable: true, immutable: true }
+            - { name: bill_id, type: uuid, nullable: true, immutable: true }
             - { name: company_id, type: uuid, immutable: true }
             - { name: method, type: string, immutable: true }
             - { name: direction, type: string, immutable: true }
@@ -824,6 +911,31 @@ nanoservices:
             - { name: vat_due_minor, type: int64, nullable: true }
             - { name: ledger_version, type: int64 }
             - { name: filed_at, type: timestamp, nullable: true }
+        - name: supplier_bill
+          prefix: sbill
+          spec:
+            - { name: name, type: string, immutable: true }
+            - { name: supplier_slug, type: string, immutable: true }
+            - { name: supplier_invoice_number, type: string, immutable: true }
+            - { name: lines, type: json, immutable: true }
+            - { name: currency, type: string, immutable: true }
+            - { name: net_minor, type: int64, immutable: true }
+            - { name: vat_minor, type: int64, immutable: true }
+            - { name: gross_minor, type: int64, immutable: true }
+            - { name: invoice_date, type: timestamp, immutable: true }
+            - { name: due_date, type: timestamp, nullable: true, immutable: true }
+            - { name: purchase_ref, type: string, nullable: true, immutable: true }
+            - { name: bank_account, type: string, nullable: true, immutable: true }
+            - { name: source_document_id, type: uuid, immutable: true }
+            - { name: approved_by, type: string, nullable: true }
+            - { name: voided, type: bool }
+          status:
+            - { name: phase, type: string }
+            - { name: match_result, type: json, nullable: true }
+            - { name: attention, type: string, nullable: true }
+            - { name: ledger_version, type: int64 }
+            - { name: approved_at, type: timestamp, nullable: true }
+            - { name: settled_at, type: timestamp, nullable: true }
       tables:
         - name: invoice_counter
           columns:
@@ -843,6 +955,10 @@ nanoservices:
             - { name: payload, type: json }
             - { name: received_at, type: timestamp }
           indexes: [ { columns: [provider_id] } ]
+        - name: supplier_bill_key
+          columns:
+            - { name: dedupe_key, type: string, primaryKey: true }
+            - { name: bill_id, type: uuid }
       configTypes:
         - name: vat_rule
           prefix: vatr
@@ -856,6 +972,7 @@ nanoservices:
             - { name: default_terms_days, type: int32 }
             - { name: card_fee_bps, type: int32 }
             - { name: reminder_days, type: json }
+            - { name: match_tolerance_bps, type: int32 }
     externalSystems:
       - name: payments
         calls:
@@ -880,10 +997,17 @@ nanoservices:
       - { message: DraftVatReturnRequest, response: VatReturn }
       - { message: MarkVatReturnFiledRequest, response: VatReturn }
       - { message: GetTrialBalanceRequest, response: TrialBalance }
+      - { message: EnsureSupplierBillRequest, response: SupplierBill }
+      - { message: ListSupplierBillsRequest, response: SupplierBillList }
+      - { message: GetSupplierBillRequest, response: SupplierBill }
+      - { message: ApproveSupplierBillRequest, response: SupplierBill }
+      - { message: VoidSupplierBillRequest, response: SupplierBill }
+      - { message: RecordSupplierPaymentRequest, response: Payment }
       - { message: PaymentWebhookEvent, response: WebhookAck }
     sends:
       - { message: ResolveMemberRequest, response: Member }
       - { message: GetCompanyRequest, response: Company }
+      - { message: GetPurchaseMatchRequest, response: PurchaseMatch }
       - { message: SendEmailRequest, response: EmailReceipt }
       - { message: InvoiceChanged }
       - { message: AuditEvent }
@@ -901,6 +1025,11 @@ nanoservices:
         - { name: DraftVatReturn, request: DraftVatReturnRequest, response: DraftVatReturnResponse }
         - { name: MarkVatReturnFiled, request: MarkVatReturnFiledRequest, response: MarkVatReturnFiledResponse }
         - { name: GetTrialBalance, request: GetTrialBalanceRequest, response: GetTrialBalanceResponse }
+        - { name: ListSupplierBills, request: ListSupplierBillsRequest, response: ListSupplierBillsResponse }
+        - { name: GetSupplierBill, request: GetSupplierBillRequest, response: GetSupplierBillResponse }
+        - { name: ApproveSupplierBill, request: ApproveSupplierBillRequest, response: ApproveSupplierBillResponse }
+        - { name: VoidSupplierBill, request: VoidSupplierBillRequest, response: VoidSupplierBillResponse }
+        - { name: RecordSupplierPayment, request: RecordSupplierPaymentRequest, response: RecordSupplierPaymentResponse }
 
   - name: notifier
     description: Sends one templated email per request, keyed by the caller.
@@ -920,3 +1049,107 @@ nanoservices:
           - { name: send_email, strategy: keyed_replay, irreversible: true, replayWindow: 24h }
     handles:
       - { message: SendEmailRequest, response: EmailReceipt }
+
+  - name: inbox
+    description: Receives email, stores it, extracts structured data from each document, and routes the result to its owner or a review queue.
+    owns:
+      processingObjects:
+        - name: inbound_message
+          prefix: imsg
+          spec:
+            - { name: provider_message_id, type: string, immutable: true }
+            - { name: to_address, type: string, immutable: true }
+            - { name: from_address, type: string, immutable: true }
+            - { name: subject, type: string, immutable: true }
+            - { name: received_at, type: timestamp, immutable: true }
+          status:
+            - { name: phase, type: string }
+            - { name: raw_key, type: string, nullable: true }
+            - { name: message_id_header, type: string, nullable: true }
+            - { name: sender_supplier_slug, type: string, nullable: true }
+            - { name: sender_verified, type: bool, nullable: true }
+            - { name: route_hint, type: string, nullable: true }
+            - { name: document_count, type: int32, nullable: true }
+            - { name: rejection, type: string, nullable: true }
+        - name: inbound_document
+          prefix: idoc
+          spec:
+            - { name: message_id, type: uuid, immutable: true }
+            - { name: part_name, type: string, immutable: true }
+            - { name: object_key, type: string, immutable: true }
+            - { name: mime_type, type: string, immutable: true }
+            - { name: sha256, type: string, immutable: true }
+            - { name: sender_supplier_slug, type: string, nullable: true, immutable: true }
+            - { name: sender_verified, type: bool, immutable: true }
+            - { name: route_hint, type: string, nullable: true, immutable: true }
+          status:
+            - { name: phase, type: string }
+            - { name: kind, type: string, nullable: true }
+            - { name: extraction, type: json, nullable: true }
+            - { name: model, type: string, nullable: true }
+            - { name: checks, type: json, nullable: true }
+            - { name: review_reason, type: string, nullable: true }
+            - { name: routed_to, type: string, nullable: true }
+            - { name: routed_ref, type: string, nullable: true }
+            - { name: applied_at, type: timestamp, nullable: true }
+      tables:
+        - name: inbound_seen
+          columns:
+            - { name: provider_message_id, type: string, primaryKey: true }
+            - { name: message_object_id, type: uuid }
+            - { name: first_seen_at, type: timestamp }
+        - name: review_decision
+          columns:
+            - { name: id, type: uuid, primaryKey: true }
+            - { name: document_id, type: uuid }
+            - { name: decision, type: string }
+            - { name: corrected_kind, type: string, nullable: true }
+            - { name: corrections, type: json, nullable: true }
+            - { name: actor, type: string }
+            - { name: decided_at, type: timestamp }
+          indexes: [ { columns: [document_id] } ]
+      configTypes:
+        - name: inbox_policy
+          prefix: ipol
+          fields:
+            - { name: max_attachment_bytes, type: int64 }
+            - { name: allowed_mime_types, type: json }
+            - { name: auto_apply_kinds, type: json }
+            - { name: retention_days, type: int32 }
+            - { name: model, type: string }
+            - { name: effort, type: string }
+    externalSystems:
+      - name: object_storage
+        calls:
+          - { name: store_inbound_object, strategy: idempotent }
+          - { name: delete_inbound_object, strategy: idempotent }
+      - name: llm
+        calls:
+          - { name: extract_document, strategy: idempotent }
+    webhooks:
+      - { provider: inbound_mail }
+    schedules:
+      - { name: purge_inbound, every: 24h }
+    handles:
+      - { message: ListInboundMessagesRequest, response: InboundMessageList }
+      - { message: ListReviewQueueRequest, response: InboundDocumentList }
+      - { message: GetInboundDocumentRequest, response: InboundDocument }
+      - { message: GetInboundFileLinkRequest, response: DownloadLink }
+      - { message: DecideInboundDocumentRequest, response: InboundDocument }
+      - { message: InboundEmailEvent, response: WebhookAck }
+    sends:
+      - { message: ResolveMemberRequest, response: Member }
+      - { message: MatchSupplierRequest, response: SupplierMatch }
+      - { message: EnsureSupplierBillRequest, response: SupplierBill }
+      - { message: RecordSupplierUpdateRequest, response: ProductionRun }
+      - { message: IngestCustomerEmailRequest, response: Quote }
+      - { message: SendEmailRequest, response: EmailReceipt }
+      - { message: AuditEvent }
+    api:
+      service: InboxService
+      methods:
+        - { name: ListInboundMessages, request: ListInboundMessagesRequest, response: ListInboundMessagesResponse }
+        - { name: ListReviewQueue, request: ListReviewQueueRequest, response: ListReviewQueueResponse }
+        - { name: GetInboundDocument, request: GetInboundDocumentRequest, response: GetInboundDocumentResponse }
+        - { name: GetInboundFileLink, request: GetInboundFileLinkRequest, response: GetInboundFileLinkResponse }
+        - { name: DecideInboundDocument, request: DecideInboundDocumentRequest, response: DecideInboundDocumentResponse }

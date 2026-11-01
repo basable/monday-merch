@@ -14,8 +14,9 @@ A quote is not money owed, so nothing is booked until an invoice is issued.
 | `credit_note` | `issued` | Frozen once issued |
 | `payment` | `pending`, `settled`, `reversed` | Starts `pending` for card, `settled` for a recorded bank transfer. `reversed` covers a chargeback. |
 | `vat_return` | `filed` | Frozen. A correction is a new return. |
+| `supplier_bill` | `approved`, `voided` | Booked only on finance's approval. `voided` reverses it. |
 
-The producer of all four is `billing`. Each snapshot carries a version bumped in the same status write that changes it (`ledger_version`).
+The producer of all five is `billing`. Each snapshot carries a version bumped in the same status write that changes it (`ledger_version`).
 
 **Desired state per object.** Every date in a batch key comes from the snapshot, never the clock. Debit equals credit per ledger and currency, and currency is the unit.
 
@@ -27,15 +28,19 @@ The producer of all four is `billing`. Each snapshot carries a version bumped in
 | Payment `settled`, incoming | `cash:<method>:<yyyy-mm>` | `receivable:<invoice id>` |
 | Payment `settled`, outgoing (refund) | `receivable:<invoice id>` | `cash:<method>:<yyyy-mm>` |
 | Payment `reversed` | Nothing, so the difference books the reversal | Nothing |
-| VAT return `filed` | `vat:<country>:<period>` VAT due | `tax_authority:<country>` |
+| VAT return `filed` | `vat:<country>:<period>` output VAT | `vat_input:<country>:<period>` input VAT, `tax_authority:<country>` the difference |
+| Supplier bill `approved` | `cost:<yyyy-mm of invoice_date>` net, `vat_input:<country>:<yyyy-Qn>` VAT | `payable:<bill id>` gross |
+| Supplier bill `voided` | Nothing, so the difference books the reversal | Nothing |
+| Payment `settled`, to a bill | `payable:<bill id>` | `cash:<method>:<yyyy-mm>` |
 
 **Which batches close, and how:**
 
 | Batch | Closed by |
 | --- | --- |
 | `receivable:<invoice id>` | Payments and credit notes. Zero means the invoice is settled. |
-| `vat:<country>:<period>` | `vat_return` filed |
-| `revenue:<yyyy-mm>`, `cash:<method>:<yyyy-mm>` | Not closed here. Reported for the accountant's books, reconciled there. |
+| `vat:<country>:<period>`, `vat_input:<country>:<period>` | `vat_return` filed |
+| `payable:<bill id>` | Supplier payments recorded by finance |
+| `revenue:<yyyy-mm>`, `cost:<yyyy-mm>`, `cash:<method>:<yyyy-mm>` | Not closed here. Reported for the accountant's books, reconciled there. |
 | `tax_authority:<country>` | Not closed here until tax payments are recorded |
 
 Positions are sums of booked lines, computed on read. Overpayment leaves a negative `receivable`, which the trial balance and staff list surface. Automatic credit handling is not in this round.
@@ -68,7 +73,7 @@ Invoices and credit notes are one lifecycle with `kind` (`invoice`, `credit_note
 
 ## Processing object: `payment`
 
-**Spec**: `reference` (unique: the bank reference or `card:<invoice id>:<n>`), `invoice_id`, `company_id`, `method` (`bank_transfer`, `card`), `direction` (`in`, `out`), `amount_minor`, `currency`, `value_date`, `cancel_requested`.
+**Spec**: `reference` (unique: the bank reference or `card:<invoice id>:<n>`), `invoice_id` or `bill_id` (exactly one), `company_id`, `method` (`bank_transfer`, `card`), `direction` (`in`, `out`), `amount_minor`, `currency`, `value_date`, `cancel_requested`.
 
 **Status**: `phase`, `intent_at`, `provider_id`, `checkout_url`, `ledger_version`, `settled_at`, `reversed_at`, `failure`.
 
@@ -94,6 +99,29 @@ A customer can pay one open invoice by card from the dashboard. Bank transfers a
 **Spec**: `country`, `period` (such as `2026-Q4`), `filed`, `filing_reference`. **Status**: `phase`, `vat_due_minor`, `ledger_version`, `filed_at`.
 
 Finance drafts it with `DraftVatReturn`, and the pass computes `vat_due_minor` from the position of `vat:<country>:<period>`. Actual filing happens at the tax authority, by a person. `MarkVatReturnFiled` writes `filed` and `filing_reference`, and the pass books `filed`, closing the batch. A later line landing in that batch stays visible as the next return's remainder. It is a lifecycle because it waits on finance and then books.
+
+## Processing object: `supplier_bill`
+
+An invoice received from a supplier or carrier. It is a lifecycle because it waits on matching and on a person, and then on payment. It usually comes from `inbox` through `EnsureSupplierBillRequest`, named by the source document.
+
+**Spec**, immutable: `name`, `supplier_slug`, `supplier_invoice_number`, `lines`, `currency`, `net_minor`, `vat_minor`, `gross_minor`, `invoice_date`, `due_date`, `purchase_ref`, `bank_account`, `source_document_id`. Mutable, as a person's intent: `approved_by`, `voided`.
+
+**Status**: `phase` (`matching`, `needs_approval`, `approved`, `settled`, `voided`), `match_result`, `attention`, `ledger_version`, `approved_at`, `settled_at`.
+
+**Reconcile pass:**
+
+| Level | Checks | Drives | Outcome |
+| --- | --- | --- | --- |
+| Deleting | `meta.deleting()` | No API marks a bill deleted | `Retry`, loud by age |
+| Voided | `voided` | Books `voided` when already booked | `Settled` |
+| Match | `match_result` empty | `GetPurchaseMatchRequest` with `purchase_ref`, comparing ordered and received quantities and prices. A `billing_policy` tolerance applies. No purchase reference simply means no match, for finance to judge. | Continue |
+| Approval | `approved_by` empty | Waits for a person. A bad match or changed `bank_account` sets `attention`. | `Settled` at `needs_approval`. `ApproveSupplierBill` writes intent through `update_spec`, which re-arms it. |
+| Book | `ledger_version` is 0 | `Book` the snapshot as `approved` | `Retry` on failure |
+| Settled? | Position of `payable:<id>` | Zero or less: sets `settled_at` | `Settled`, otherwise `Converged.after(24h)` |
+
+**Worker:** resync 6h, backoff 30s to 15m, `max_attempts` 0, attempt timeout 60s.
+
+**Rules:** always a person's approval, with no automatic path. A bill never starts a payment: finance pays through the bank and records it with `RecordSupplierPayment`. **`supplier_bill_key`** (`dedupe_key`, `bill_id`), unique on supplier and invoice number, stops the same invoice being booked twice however it arrives. Reverse-charge purchase VAT is not handled in this version, so bills needing it get `attention` for the accountant.
 
 ## Tables
 
@@ -121,13 +149,15 @@ Finance drafts it with `DraftVatReturn`, and the pass computes `vat_due_minor` f
 
 `BillingService`, customer: `ListInvoices`, `GetInvoice`, `GetInvoiceDownload`, `PayInvoiceByCard`, `GetSpendReport`. Finance staff: `RecordBankPayment`, `IssueCreditNote`, `RecordRefund`, `DraftVatReturn`, `MarkVatReturnFiled`, `GetTrialBalance`.
 
+Finance staff also: `ListSupplierBills`, `GetSupplierBill`, `ApproveSupplierBill`, `VoidSupplierBill`, `RecordSupplierPayment`.
+
 `GetSpendReport` groups invoice lines by department, cost centre and order for a company. It reads spec lines and settled status, and no balance column exists.
 
-Internal: `EnsureInvoiceRequest` from `order` and `fulfilment`, `GetInvoiceRequest` from `order`. `InvoiceChanged` is a wake-up for `order`.
+Internal: `EnsureInvoiceRequest` from `order` and `fulfilment`, `GetInvoiceRequest` from `order`, `EnsureSupplierBillRequest` from `inbox`. `InvoiceChanged` is a wake-up for `order`.
 
 ## Binding Directive sections
 
-§1, §2 (tables), §3 to §5 (`invoice`, `payment`, `vat_return`), §6 (all four calls), §7 (counter pattern, generations, names), §11 (the ledger).
+§1, §2 (tables), §3 to §5 (`invoice`, `payment`, `vat_return`, `supplier_bill`), §6 (all four calls), §7 (counter pattern, generations, names), §11 (the ledger).
 
 ## Tests
 
@@ -140,3 +170,6 @@ Internal: `EnsureInvoiceRequest` from `order` and `fulfilment`, `GetInvoiceReque
 - A redelivered Stripe event books once, and a lost one is caught by reading the session.
 - The trial balance sums to zero per unit after every scenario.
 - Changing a rule bumps the rules version and restates through appended journals only.
+- The same supplier invoice arriving twice makes one bill.
+- A bill is never booked before approval, and no path from `inbox` can approve one.
+- Payable positions settle with recorded payments, and a VAT return closes both VAT batches.

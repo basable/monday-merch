@@ -57,6 +57,17 @@ These decide whether the business can run. The plan models them, but it does not
 
 Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned for. Rows marked "round 1" are the user's answers. Any other `include` follows directly from "same functionality" or because the order flow cannot work without it, and has not been individually confirmed, so correct anything here that is wrong.
 
+### Email and invoice intake
+
+| Feature | Decision | Rationale |
+| --- | --- | --- |
+| Receive email automatically and store it | `include` | The user's first priority |
+| Extract supplier invoices with AI, with checks and a review queue | `include` | The user's first priority |
+| Read supplier updates into production runs | `include` | Replaces staff retyping supplier emails. Turns on once `order` exists. |
+| Turn customer emails into quotes in the consultant's queue | `include` | Same mechanism. Turns on once `order` exists. |
+| Apply results with no human review | `later` | Off until an evaluation shows a kind is accurate enough |
+| Pay supplier invoices automatically | `exclude` | Too risky given invoice fraud. A person pays, and finance records it. |
+
 ### Public site
 
 | Feature | Decision | Rationale |
@@ -105,8 +116,9 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | --- | --- | --- |
 | Brand Hub with uploaded logos, colours, fonts | `include` | Consultants need the assets |
 | Proofs and change requests on a quote | `include` | Signing a quote approves its designs |
-| Design Studio editor | `later` | Round 1. Designers produce proofs at launch. |
-| Brand import, templates, 3D preview, Shuffle, Vectorize, Figma and Canva import | `later` | Follow the Studio. Asked when it is scheduled. |
+| Design Studio editor | `include` | Round 1, changed by the user from `later`. Text, images, shapes, print areas, cut guides, print-method comparison, live price. |
+| Studio templates | `include` | Their Studio starts from them, and designers publish them from the editor |
+| Brand import, 3D preview, Shuffle, Vectorize, Figma and Canva import | `later` | Now unblocked by the Studio, first in line after the preview |
 
 ### Warehouse and shipping
 
@@ -159,7 +171,7 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 | Accounting software export | `open` round 3 | Finance will ask for it |
 | E-invoicing (Peppol) | `open` round 3 | Enterprise buyers and EU rules are moving this way |
 | Bank feed matching | `later` | Staff record payments at first |
-| Supplier payables on the ledger | `later` | Cost stays a plain field, payables stay in accounting software |
+| Supplier bills on the ledger | `include` | A received invoice that finance approves is money owed, so Directive §11 applies. Paying suppliers stays outside the system, and finance records it. |
 
 ### Compliance
 
@@ -170,24 +182,28 @@ Decisions: `include`, `exclude`, `later`, or `open` with the round it is planned
 
 ## Decided
 
-**Round 1 (2026-11-01):** self-serve checkout `later`, card payment `include`, held stock and kitting `include`, Design Studio `later`. No notes were added. The answers match the assumptions the first commit was written for, so the manifest's nanoservices did not change. No warehouse or logistics partner was named, so that remains a business prerequisite.
+**Round 1 (2026-11-01):** self-serve checkout `later`, card payment `include`, held stock and kitting `include`, Design Studio `include` (the user first chose `later`, then changed it). No warehouse or logistics partner was named, so that remains a business prerequisite.
 
-## Round 2: asked now
+**Then, in the user's words:** "firstmost i want a automated system for receving and parsing emails/invoices", which added the `inbox` nanoservice and supplier bills. And "Goal set: get the preview live", which ended this round of questions so the skeleton could render.
 
-Unlike round 1, these are not in the manifest yet, because they add a nanoservice or an identity decision. Answers add them.
+## Build order
 
-| Candidate | Recommended | What the answer changes |
-| --- | --- | --- |
-| Redeem Links | `include` | Adds a `stores` nanoservice with a redemption lifecycle, and vouchers on the ledger |
-| Team Store | `later` | `include` adds store catalogues, budgets, approvals and a monthly fee to `stores` |
-| SSO and SAML | `later` | `include` requires settling the identity question in `01-architecture.md` first |
-| Punchout and procurement systems | `later` | `include` adds cXML punchout and purchase order intake |
+The user's priority sets the order. Everything renders at once, and these are the order to fill in the logic:
 
-## Open candidates for later rounds
+1. **Skeleton on preview:** deploys, migrations, sign-in, a real landing page.
+2. **`inbox`:** receive, store, extract, review queue. Useful by itself.
+3. **`billing`:** the ledger and supplier bills, then customer invoices and payments.
+4. **`catalog`, `design` proofs, `order` quotes:** the public shop and the quote flow.
+5. **`order` lifecycles and `fulfilment`:** production runs, stock, shipments. Supplier updates and customer emails start routing here.
+6. **Design Studio.**
 
-- **Round 3:** Brand Store, Group Orders, HR and CRM connectors, purchase approvals, pack builder, languages and regions, multi-currency, supplier catalogue feeds, third-party logistics and the carrier provider, DDP, US region, samples, event planner, bespoke approvals, public API, volume rebates, accounting export, e-invoicing.
-- **Round 4:** inspiration gallery, returns, plus anything raised on the way.
+## Open candidates, not yet asked
+
+These stay open. None is in the manifest, and `scaffold_nanoservice` adds what is missing later.
+
+- **Next round:** Redeem Links, Team Store, SSO and SAML, punchout and procurement systems.
+- **After that:** Brand Store, Group Orders, HR and CRM connectors, purchase approvals, pack builder, languages and regions, multi-currency, supplier catalogue feeds, third-party logistics and the carrier provider, DDP, US region, samples, event planner, bespoke approvals, public API, volume rebates, accounting export, e-invoicing, Studio extras, inspiration gallery, returns.
 
 ## Status
 
-Not ready. Round 2 is waiting for answers.
+`ready` to render for a first preview, at the user's request. The product is not feature-complete: the candidates above are undecided, and the working name is a placeholder until the user chooses one.

@@ -1,6 +1,6 @@
 # 01: Architecture
 
-One Rust binary with two replicas over one Postgres database, made of seven nanoservices. Stores and integrations will add two more if round 2 includes them. They are not in the manifest yet.
+One Rust binary with two replicas over one Postgres database, made of eight nanoservices. Stores and integrations would add two more if a later round includes them. They are not in the manifest yet.
 
 ## The main path
 
@@ -29,30 +29,35 @@ One Rust binary with two replicas over one Postgres database, made of seven nano
 
 **`notifier`** owns one external call, `send_email`, and the template catalog. It has no lifecycle, because the caller's own pass decides whether an email went out. No API.
 
+**`inbox`** receives email and turns it into structured data. `inbound_message` is a processing-object type because it fetches from a provider with expiring links. `inbound_document` is a second type because each attachment is extracted, checked and possibly reviewed by a person on its own. Decisions arrive unfenced through a side table. The model only extracts data, so code and people decide what happens next, and nothing here moves money. External: `llm` (`extract_document`), `object_storage`, and an inbound mail webhook. Schedule: `purge_inbound`. API: `InboxService`. See `02-inbox.md`.
+
 ## Deployment shape
 
 - One binary, `replicas: 2`, Connect over protobuf at `/api/*`, plain Rust messages inside.
 - One CloudNativePG cluster, `instances: 1`, one application database with one schema and role per stateful nanoservice, and a separate `kratos` database.
-- Frontend from the public bucket as plain HTML, CSS and JavaScript. `/shop/*` is rendered by the binary, a deviation from the standard shape explained in `02-catalog.md` and recorded in `05-deployment.md`.
+- Frontend from the public bucket: React apps plus plain HTML marketing pages. `/shop/*` is rendered by the binary, a deviation from the standard shape explained in `02-catalog.md` and recorded in `05-deployment.md`.
 - Ory Kratos at `/.ory/*`, passwordless email code and passkeys.
 - Schedules are workers in each nanoservice's `loops()`, and webhooks are raw routes.
 
-### Why a static frontend
+### Why React
 
-The dashboard and staff console are forms, tables and status views, so plain pages over Connect's JSON are enough. React is justified only by an editor. The Design Studio was deferred in round 1, so when it is scheduled it arrives as its own React page, and this plan is updated then.
+The Design Studio is an editor: a heavily updating surface with layers, drag handles and live prices, which is the case the platform reserves React for. Since the build is there anyway, the dashboard and staff console use it too, with Tailwind and shadcn/ui as the platform's conventions set out.
+
+Marketing pages stay **plain HTML documents** with their content in the markup, because search engines must read them, and they share design tokens with the apps through one stylesheet. The editor's code loads only on `/studio/`, so public pages stay fast.
 
 | Path | Audience | Served by |
 | --- | --- | --- |
 | `/`, `/services/`, `/use-cases/`, `/articles/` and so on | Public | Bucket |
 | `/shop/*` | Public | Binary, server-rendered |
-| `/app/` | Customers | Bucket, data over `/api` |
-| `/ops/` | Staff | Bucket, data over `/api`, authorised by `staff_member` |
+| `/studio/` | Public to design, sign-in to save | Bucket, React |
+| `/app/` | Customers | Bucket, React, data over `/api` |
+| `/ops/` | Staff, including the inbox review queue | Bucket, React, data over `/api`, authorised by `staff_member` |
 
-The platform answers an unknown path with the root `index.html`, so dashboard pages take ids in the query string (`/app/orders/?id=ord_...`).
+The platform answers an unknown path with the *root* `index.html`, not the app's own, so a deep link like `/app/orders/ord_1` would load the marketing homepage. The apps therefore use hash routes (`/app/#/orders/ord_1`).
 
 ### Auth
 
-`project.basableLogin` is `false`. The default offers "Sign in with Basable", but customers here are employees of other companies who have no reason to hold a Basable account, and an enterprise sign-in page should not show a hosting provider's button. The cost is that email-code sign-in depends entirely on Kratos's SMTP, so nobody can sign in until that secret is set (`05-deployment.md`).
+`project.basableLogin` is `true` **for now**, because it lets a preview sign in with no SMTP secret. **Turn it off before customers arrive:** they are employees of other companies who have no reason to hold a Basable account, and an enterprise sign-in page should not show a hosting provider's button. After that, email-code sign-in depends entirely on Kratos's SMTP (`05-deployment.md`).
 
 Authorisation lives in each nanoservice. The `api` crate validates the Kratos session, and each handler resolves the actor with `ResolveMemberRequest` and filters by that actor's company. The company id is never taken from a request body.
 
@@ -66,43 +71,58 @@ Every message, generated from `manifest.yaml`. "`api` crate" means the message i
 | --- | --- | --- | --- |
 | `AcceptQuoteRequest` | `api` crate | order | `Order` |
 | `AdjustStockRequest` | `api` crate | fulfilment | `StockLevel` |
+| `AdoptDesignsRequest` | order | design | `DesignAdoption` |
 | `ApproveProofsRequest` | order | design | `ProofApproval` |
+| `ApproveSupplierBillRequest` | `api` crate | billing | `SupplierBill` |
+| `ArchiveDesignRequest` | `api` crate | design | `DesignDocument` |
 | `ArchiveProductRequest` | `api` crate | catalog | `Product` |
 | `AssignQuoteRequest` | `api` crate | order | `Quote` |
-| `AuditEvent` | catalog, design, order, fulfilment, billing | account | void event |
+| `AuditEvent` | catalog, design, order, fulfilment, billing, inbox | account | void event |
 | `CancelOrderRequest` | `api` crate | order | `Order` |
 | `CancelShipmentRequest` | `api` crate | fulfilment | `Shipment` |
 | `CarrierWebhookEvent` | `api` raw route | fulfilment | `WebhookAck` |
 | `ConfirmAssetUploadRequest` | `api` crate | design | `BrandAsset` |
 | `CreateAssemblyOrderRequest` | `api` crate | fulfilment | `AssemblyOrder` |
 | `CreateAssetUploadRequest` | `api` crate | design | `AssetUpload` |
+| `CreateDesignRequest` | `api` crate | design | `DesignDocument` |
 | `CreateImageUploadRequest` | `api` crate | catalog | `ImageUpload` |
+| `CreatePreviewUploadRequest` | `api` crate | design | `PreviewUpload` |
 | `CreateProofRequest` | `api` crate | design | `Proof` |
 | `CreateShipmentsRequest` | `api` crate | fulfilment | `ShipmentBatch` |
+| `DecideInboundDocumentRequest` | `api` crate | inbox | `InboundDocument` |
 | `DeleteBrandAssetRequest` | `api` crate | design | `BrandAsset` |
 | `DraftVatReturnRequest` | `api` crate | billing | `VatReturn` |
 | `EnsureCompanyRequest` | order | account | `Company` |
 | `EnsureInboundRequest` | order | fulfilment | `Inbound` |
 | `EnsureInvoiceRequest` | order, fulfilment | billing | `Invoice` |
 | `EnsureShipmentRequest` | order | fulfilment | `Shipment` |
+| `EnsureSupplierBillRequest` | inbox | billing | `SupplierBill` |
 | `EraseRecipientRequest` | `api` crate | account | `Recipient` |
 | `EstimateDeliveryRequest` | `api` crate | fulfilment | `DeliveryEstimate` |
 | `GetApprovedArtworkRequest` | order | design | `ArtworkBundle` |
 | `GetBrandProfileRequest` | `api` crate | design | `BrandProfile` |
 | `GetCompanyRequest` | `api` crate, order, billing | account | `Company` |
 | `GetCustomsDataRequest` | fulfilment | catalog | `CustomsData` |
+| `GetDesignRequest` | `api` crate | design | `DesignDocument` |
+| `GetDesignTemplateRequest` | `api` crate | design | `DesignTemplate` |
+| `GetInboundDocumentRequest` | `api` crate | inbox | `InboundDocument` |
+| `GetInboundFileLinkRequest` | `api` crate | inbox | `DownloadLink` |
 | `GetInboundRequest` | order | fulfilment | `Inbound` |
 | `GetInvoiceDownloadRequest` | `api` crate | billing | `DownloadLink` |
 | `GetInvoiceRequest` | `api` crate, order | billing | `Invoice` |
 | `GetOrderRequest` | `api` crate | order | `Order` |
 | `GetProductRequest` | `api` crate | catalog | `Product` |
+| `GetPurchaseMatchRequest` | billing | order | `PurchaseMatch` |
 | `GetQuoteRequest` | `api` crate | order | `Quote` |
 | `GetShipmentRequest` | `api` crate, order | fulfilment | `Shipment` |
 | `GetSpendReportRequest` | `api` crate | billing | `SpendReport` |
+| `GetSupplierBillRequest` | `api` crate | billing | `SupplierBill` |
 | `GetSupplierOffersRequest` | order | catalog | `SupplierOffers` |
 | `GetTrialBalanceRequest` | `api` crate | billing | `TrialBalance` |
 | `ImportRecipientsRequest` | `api` crate | account | `RecipientImportResult` |
 | `InboundChanged` | fulfilment | order | void event |
+| `InboundEmailEvent` | `api` raw route | inbox | `WebhookAck` |
+| `IngestCustomerEmailRequest` | inbox | order | `Quote` |
 | `InviteMemberRequest` | `api` crate | account | `Member` |
 | `InvoiceChanged` | billing | order | void event |
 | `IssueCreditNoteRequest` | `api` crate | billing | `Invoice` |
@@ -111,6 +131,9 @@ Every message, generated from `manifest.yaml`. "`api` crate" means the message i
 | `ListBrandAssetsRequest` | `api` crate | design | `BrandAssetList` |
 | `ListCategoriesRequest` | `api` crate | catalog | `CategoryList` |
 | `ListDepartmentsRequest` | `api` crate | account | `DepartmentList` |
+| `ListDesignTemplatesRequest` | `api` crate | design | `DesignTemplateList` |
+| `ListDesignsRequest` | `api` crate | design | `DesignList` |
+| `ListInboundMessagesRequest` | `api` crate | inbox | `InboundMessageList` |
 | `ListInboundRequest` | `api` crate | fulfilment | `InboundList` |
 | `ListInvoicesRequest` | `api` crate | billing | `InvoiceList` |
 | `ListKitsRequest` | `api` crate | fulfilment | `KitList` |
@@ -121,9 +144,12 @@ Every message, generated from `manifest.yaml`. "`api` crate" means the message i
 | `ListProofsRequest` | `api` crate, order | design | `ProofList` |
 | `ListQuotesRequest` | `api` crate | order | `QuoteList` |
 | `ListRecipientsRequest` | `api` crate | account | `RecipientList` |
+| `ListReviewQueueRequest` | `api` crate | inbox | `InboundDocumentList` |
 | `ListShipmentsRequest` | `api` crate | fulfilment | `ShipmentList` |
 | `ListStockRequest` | `api` crate | fulfilment | `StockList` |
+| `ListSupplierBillsRequest` | `api` crate | billing | `SupplierBillList` |
 | `MarkVatReturnFiledRequest` | `api` crate | billing | `VatReturn` |
+| `MatchSupplierRequest` | inbox | catalog | `SupplierMatch` |
 | `PayInvoiceByCardRequest` | `api` crate | billing | `CheckoutLink` |
 | `PaymentWebhookEvent` | `api` raw route | billing | `WebhookAck` |
 | `PriceLinesRequest` | `api` crate, order | catalog | `PricedLines` |
@@ -134,14 +160,19 @@ Every message, generated from `manifest.yaml`. "`api` crate" means the message i
 | `RecordPickRequest` | `api` crate | fulfilment | `Shipment` |
 | `RecordProductionEventRequest` | `api` crate | order | `ProductionRun` |
 | `RecordRefundRequest` | `api` crate | billing | `Payment` |
+| `RecordSupplierPaymentRequest` | `api` crate | billing | `Payment` |
+| `RecordSupplierUpdateRequest` | inbox | order | `ProductionRun` |
 | `RemoveMemberRequest` | `api` crate | account | `Member` |
 | `RenderShopPageRequest` | `api` raw route | catalog | `ShopPage` |
 | `ReorderRequest` | `api` crate | order | `Quote` |
 | `RequestQuoteChangesRequest` | `api` crate | order | `Quote` |
 | `RequestQuoteRequest` | `api` crate | order | `Quote` |
-| `ResolveMemberRequest` | catalog, design, order, fulfilment, billing | account | `Member` |
+| `ResolveDesignVersionRequest` | order | design | `DesignVersionRef` |
+| `ResolveMemberRequest` | catalog, design, order, fulfilment, billing, inbox | account | `Member` |
 | `ResolveRecipientsRequest` | fulfilment | account | `RecipientList` |
-| `SendEmailRequest` | account, order, fulfilment, billing | notifier | `EmailReceipt` |
+| `SaveDesignDraftRequest` | `api` crate | design | `DesignDocument` |
+| `SaveDesignVersionRequest` | `api` crate | design | `DesignVersion` |
+| `SendEmailRequest` | account, order, fulfilment, billing, inbox | notifier | `EmailReceipt` |
 | `SetDecorationOptionsRequest` | `api` crate | catalog | `Product` |
 | `SetLowStockRuleRequest` | `api` crate | fulfilment | `LowStockRule` |
 | `SetPriceTiersRequest` | `api` crate | catalog | `Product` |
@@ -153,7 +184,9 @@ Every message, generated from `manifest.yaml`. "`api` crate" means the message i
 | `UpdateMemberRequest` | `api` crate | account | `Member` |
 | `UpsertAddressRequest` | `api` crate | account | `Address` |
 | `UpsertDepartmentRequest` | `api` crate | account | `Department` |
+| `UpsertDesignTemplateRequest` | `api` crate | design | `DesignTemplate` |
 | `UpsertKitRequest` | `api` crate | fulfilment | `Kit` |
 | `UpsertProductRequest` | `api` crate | catalog | `Product` |
 | `UpsertRecipientRequest` | `api` crate | account | `Recipient` |
 | `UpsertVariantRequest` | `api` crate | catalog | `Variant` |
+| `VoidSupplierBillRequest` | `api` crate | billing | `SupplierBill` |

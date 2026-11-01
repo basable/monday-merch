@@ -25,11 +25,11 @@ Quote invariants:
 - Signing requires a Kratos session whose verified email is `contact_email` or a member of `company_id`. This proves mailbox control before a company is created.
 - No changes after signature. `CancelOrder` is staff-only.
 
-`RequestQuote` is public, so it is rate limited per IP hash with an in-memory `DashMap` (approximate across replicas, which is acceptable here), capped in size, and it re-prices every line through `PriceLinesRequest`. Spam protection beyond that is decided once real traffic shows the need.
+A quote line may name a Studio design. That needs a signed-in owner, and `order` turns it into a fixed version with `ResolveDesignVersionRequest`. `RequestQuote` is public, so it is rate limited per IP hash with an in-memory `DashMap` (approximate across replicas, which is acceptable here), capped in size, and it re-prices every line through `PriceLinesRequest`. Spam protection beyond that is decided once real traffic shows the need.
 
 ### Signing, step by step
 
-`AcceptQuote` runs: check signature rights → `EnsureCompanyRequest` when there is no company → `ApproveProofsRequest` → write the signature and `accepted` in one transaction → `TypedStore::create` the `order`, named by the quote → store `order_id`.
+`AcceptQuote` runs: check signature rights → `EnsureCompanyRequest` when there is no company, then `AdoptDesignsRequest` → `ApproveProofsRequest` → write the signature and `accepted` in one transaction → `TypedStore::create` the `order`, named by the quote → store `order_id`.
 
 A crash between the last two steps leaves an `accepted` quote with no order. `sweep_quotes` finds these and finishes the job. The name makes that create idempotent.
 
@@ -100,6 +100,8 @@ Suppliers have no API at this stage, so staff record what they hear. That input 
 `OrderService`, public: `RequestQuote`, `SubmitLead`. Customer: `ListQuotes`, `GetQuote`, `RequestQuoteChanges`, `AcceptQuote`, `Reorder`, `ListOrders`, `GetOrder`. Staff: `AssignQuote`, `PublishQuoteVersion`, `CancelOrder`, `ListProductionRuns`, `RecordProductionEvent`.
 
 `Reorder` starts a new quote from an order's lines and approved proofs at today's prices. A restock request is the same call.
+
+From `inbox`: `RecordSupplierUpdateRequest` writes a `production_event` and nudges the run, so a supplier's email has the same effect as staff recording it, and `IngestCustomerEmailRequest` creates a quote in the consultant's queue, named by the document so a retry is safe. Neither can bypass review or signature. From `billing`: `GetPurchaseMatchRequest` answers what a run ordered and received, for matching a supplier's bill.
 
 `InvoiceChanged`, `InboundChanged` and `ShipmentChanged` are wake-ups only. Each handler nudges the object concerned. The resync is what guarantees progress if an event is lost, so these are events and not cascades (Directive §7).
 

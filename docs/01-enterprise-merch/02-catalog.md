@@ -10,9 +10,9 @@ What can be bought and at what list price, and the public shop pages. No lifecyc
 
 **`price_tier`** is one quantity break: `product_id`, `currency`, `min_qty`, `unit_minor`. Amounts are integer minor units.
 
-**`decoration_option`** is one way to decorate: `product_id`, `print_method_slug`, `areas` (such as front, back, chest left), `currency`, `setup_minor`, `per_unit_minor`.
+**`decoration_option`** is one way to decorate: `product_id`, `print_method_slug`, `areas`, `currency`, `setup_minor`, `per_unit_minor`. Each entry in `areas` is what the Studio draws: the area's name (such as front or chest left), its view, its rectangle on that view's image, its physical size in millimetres, and for print products the bleed and safe margins.
 
-**`product_image`** points at the public bucket: `product_id`, `variant_id`, `object_key`, `alt_text`, `position`.
+**`product_image`** points at the public bucket: `product_id`, `variant_id`, `object_key`, `alt_text`, `position`, and `view` (`front`, `back`, `sleeve`, `label`) for the images the Studio draws on.
 
 **`supplier_offer`** is who makes it at what cost: `product_id`, `supplier_slug`, `supplier_sku`, `currency`, `cost_minor`, `lead_days`, `preferred`. **Internal only.** Cost must never reach a public response.
 
@@ -47,7 +47,7 @@ Product images go in the public bucket under `catalog/`, uploaded by staff throu
 
 `CatalogService`: `ListProducts`, `GetProduct`, `ListCategories` and `PriceLines` are public. `UpsertProduct`, `UpsertVariant`, `SetPriceTiers`, `SetDecorationOptions`, `SetSupplierOffers`, `CreateImageUpload` and `ArchiveProduct` require a staff role.
 
-Internal: `PriceLinesRequest` and `GetSupplierOffersRequest` (`order`), `GetCustomsDataRequest` (`fulfilment`), `RenderShopPageRequest` (`api` raw route).
+Internal: `PriceLinesRequest` and `GetSupplierOffersRequest` (`order`), `GetCustomsDataRequest` (`fulfilment`), `MatchSupplierRequest` (`inbox`, returning the supplier for a sending domain and its bank accounts on file), `RenderShopPageRequest` (`api` raw route).
 
 ## Binding Directive sections
 

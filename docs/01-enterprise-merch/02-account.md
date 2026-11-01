@@ -23,7 +23,7 @@ Queries: all company data is filtered by `company_id` taken from the resolved me
 ## Invariants
 
 - A public quote request never grants access to an existing company. `EnsureCompanyRequest` always creates a new company keyed on the quote. It never matches on company name or email domain. Staff merge duplicates by hand.
-- A member's company comes from `ResolveMemberRequest`, whose result depends only on the verified Kratos identity.
+- A member's company comes from `ResolveMemberRequest`, whose result depends only on the verified Kratos identity. A signed-in person with no membership resolves to an identity with no company, which is enough to save a Studio design and nothing more.
 - Erasure overwrites the personal fields of a `recipient` and sets `erased_at`. Rows remain so labels and counts stay consistent.
 
 ## Messages and API

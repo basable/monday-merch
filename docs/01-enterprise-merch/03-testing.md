@@ -20,6 +20,9 @@ Exactly one `effecttest` audit per adapter, in the nanoservice's `tests/effects_
 | `billing` | `create_refund` | `keyed_replay` 24h | Yes |
 | `billing` | `store_document` | `idempotent` | No |
 | `notifier` | `send_email` | `keyed_replay` 24h | Yes |
+| `inbox` | `extract_document` | `idempotent` | No |
+| `inbox` | `store_inbound_object` | `idempotent` | No |
+| `inbox` | `delete_inbound_object` | `idempotent` | No |
 
 ## Integration suites
 
@@ -35,10 +38,14 @@ On `basable-testkit`, with Postgres in testcontainers and one database per test.
 - **Invoice sequence:** concurrent issuing gives a gap-free sequence per series.
 - **Ledger:** `basable-ledger-testkit` scenario, property and conformance suites, plus a trial balance of zero per currency at the end of every order scenario.
 - **Personal data:** after retention runs, no recipient or shipment address remains in any table.
+- **Email to bill:** a simulated webhook through to a `supplier_bill` waiting for approval, with the extraction provider simulated.
+- **Hostile email:** fixed documents carrying injected instructions, forged senders and changed bank accounts cause no action beyond a review item.
+
+**Extraction quality** is a separate, deliberate evaluation against labelled documents, described in `02-inbox.md`. It calls the real model, costs money, and is not part of CI.
 
 ## Browser checks
 
-A small set of end-to-end runs against a preview environment: request a quote anonymously, sign in with an email code, sign a quote, pay in a Stripe sandbox, see the order's status. Also, `/shop` pages render without JavaScript, because search engines depend on that.
+A small set of end-to-end runs against a preview environment: use the Studio as set out in `02-design.md`, request a quote anonymously, sign in with an email code, sign a quote, pay in a Stripe sandbox, see the order's status. Also, `/shop` pages render without JavaScript, because search engines depend on that.
 
 ## What CI proves before a deploy
 
